@@ -7,16 +7,20 @@ export default function DashboardOverview() {
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['dashboard-metrics'],
     queryFn: async () => {
-      // 🎯 Sync base route path precisely with main application environment setups
-      const res = await axios.get('http://localhost:5000/api/v1/orders/live');
-      const allOrders = res.data.data || [];
+      // Axios call directly to our today-restricted backend route
+      const res = await axios.get('http://localhost:5000/api/v1/orders/live', { withCredentials: true });
+      const todayOrders = res.data.data || [];
       
-      const revenue = allOrders.reduce((acc, curr) => acc + (curr.total || 0), 0);
+      // Calculate revenue from today's orders (Excluding REJECTED orders for clear accounting)
+      const revenue = todayOrders
+        .filter(o => o.status !== 'REJECTED')
+        .reduce((acc, curr) => acc + (curr.total || 0), 0);
+
       return {
         revenue,
-        totalOrders: allOrders.length,
-        pending: allOrders.filter(o => o.status === 'PENDING').length,
-        accepted: allOrders.filter(o => o.status === 'ACCEPTED').length,
+        totalOrdersToday: todayOrders.length,
+        pending: todayOrders.filter(o => o.status === 'PENDING').length,
+        accepted: todayOrders.filter(o => o.status === 'ACCEPTED').length,
       };
     }
   });
@@ -25,7 +29,7 @@ export default function DashboardOverview() {
     return (
       <div className="flex flex-col items-center justify-center p-16 space-y-4">
         <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-bold text-slate-500 tracking-tight">Syncing Live Merchant Metrics...</p>
+        <p className="text-sm font-bold text-slate-500 tracking-tight">Syncing Live Today's Metrics...</p>
       </div>
     );
   }
@@ -38,8 +42,8 @@ export default function DashboardOverview() {
       bg: "bg-emerald-50 border-emerald-100/60" 
     },
     { 
-      title: "Active Orders", 
-      value: metrics?.totalOrders || 0, 
+      title: "Today's Total Orders", 
+      value: metrics?.totalOrdersToday || 0, 
       icon: <ShoppingBag size={20} className="text-rose-600" />, 
       bg: "bg-rose-50 border-rose-100/60" 
     },
@@ -63,11 +67,11 @@ export default function DashboardOverview() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-xs">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Operational Insights</h1>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">Real-time store unit telemetry parameters summary</p>
+          <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">Real-time store unit telemetry parameters summary (Today)</p>
         </div>
         <div className="flex items-center gap-2 self-start md:self-center bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-xl">
           <span className="w-2 h-2 bg-rose-500 rounded-full animate-ping" />
-          <span className="text-[11px] font-black tracking-wider uppercase text-rose-600">Live Syncing Active</span>
+          <span className="text-[11px] font-black tracking-wider uppercase text-rose-600">Today's Tracker Active</span>
         </div>
       </div>
 

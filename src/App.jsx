@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { Menu, X, LayoutDashboard, ShoppingBag, Utensils, Settings } from 'lucide-react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { Menu, X } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import LiveOrderMonitor from './features/orders/LiveOrderMonitor';
@@ -8,7 +8,7 @@ import DashboardOverview from './features/dashboard/DashboardOverview';
 import RegisterTenant from './features/auth/RegisterTenant';
 import MenuCatalog from './features/menu/MenuCatalog';
 import StoreSettings from './features/settings/StoreSettings';
-import PublicMenu from './features/public/PublicMenu'; // Customer View
+import PublicMenu from './features/public/PublicMenu'; // Customer Isolated View
 import { useAuth } from './context/AuthContext';
 
 export default function App() {
@@ -29,7 +29,7 @@ export default function App() {
     }
   };
 
-  // Admin Protected Shell Dashboard Layout Layout Wrapper
+  // 🔴 PROTECTED MERCHANT SHELL INTERFACES (Admin Only)
   const AdminLayout = () => {
     if (!user) {
       if (authView === 'SIGNUP') {
@@ -38,7 +38,7 @@ export default function App() {
 
       return (
         <div className="min-h-screen grid lg:grid-cols-12 bg-[#F8F9FA] font-sans">
-          {/* Left Side Visual Banner - Inspired by Zomato Enterprise */}
+          {/* Left Side Visual Banner */}
           <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-rose-500 via-red-500 to-amber-500 p-12 flex-col justify-between relative overflow-hidden">
             <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
             <div className="relative z-10">
@@ -51,7 +51,7 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Side Compact Luxury Form Frame */}
+          {/* Right Side Login Form */}
           <div className="col-span-12 lg:col-span-7 flex items-center justify-center p-6 md:p-12">
             <div className="max-w-md w-full space-y-6">
               <div className="space-y-2">
@@ -110,12 +110,12 @@ export default function App() {
 
     return (
       <div className="min-h-screen bg-[#F7F9FB] flex antialiased text-slate-800">
-        {/* 💻 Desktop Sidebar Navigation Structure Component Layout */}
+        {/* Desktop Sidebar Navigation */}
         <div className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-white border-r border-slate-200/80 z-30">
           <Sidebar />
         </div>
 
-        {/* 📱 Mobile Responsive Side-Drawer Backdrop Mask Overlay */}
+        {/* Mobile Responsive Overlay */}
         {isMobileSidebarOpen && (
           <div 
             onClick={() => setIsMobileSidebarOpen(false)} 
@@ -123,7 +123,7 @@ export default function App() {
           />
         )}
 
-        {/* 📱 Mobile Sliding Navigation Drawer Layer */}
+        {/* Mobile Sliding Navigation Drawer */}
         <div className={`lg:hidden fixed inset-y-0 left-0 w-64 bg-white shadow-2xl z-50 transform ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-out`}>
           <div className="absolute top-4 right-4 p-1 text-slate-500" onClick={() => setIsMobileSidebarOpen(false)}>
             <X size={20} className="cursor-pointer" />
@@ -131,9 +131,8 @@ export default function App() {
           <Sidebar closeMobileSidebar={() => setIsMobileSidebarOpen(false)} />
         </div>
 
-        {/* Dynamic Inner Layout Boundary Content Framing Viewports */}
+        {/* Dynamic Inner Layout Content Viewport */}
         <div className="flex-1 w-full lg:pl-64 flex flex-col min-h-screen">
-          {/* Combined Top Global Dynamic Status Navigation Control Bar */}
           <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 px-4 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button 
@@ -147,7 +146,6 @@ export default function App() {
             <Navbar />
           </header>
 
-          {/* Core Route Rendering View Space Viewports */}
           <main className="flex-1 p-4 md:p-6 lg:p-8 max-w-7xl w-full mx-auto">
             <Routes>
               <Route path="/" element={<DashboardOverview />} />
@@ -164,11 +162,10 @@ export default function App() {
 
   return (
     <Routes>
-      {/* 🟢 PUBLIC ISOLATED CUSTOMER MENUS */}
-      <Route path="/public/catalog/:restaurantId" element={<PublicMenu />} />
-      <Route path="/menu/public/catalog/:restaurantId" element={<PublicMenu />} />
+      {/* 🟢 PUBLIC ISOLATED CUSTOMER ROUTE: Isme koi login layout ya sidebar nahi aayega */}
+      <Route path="/catalog/:restaurantId" element={<PublicMenu />} />
 
-      {/* 🔴 PROTECTED MERCHANT SHELL INTERFACES */}
+      {/* 🔴 MERCHANT ADMIN SHELL SYSTEM */}
       <Route path="/*" element={<AdminLayout />} />
     </Routes>
   );

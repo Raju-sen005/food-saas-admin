@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { useSocket } from '../../context/SocketContext';
 import { useNotificationSound } from '../../hooks/useNotificationSound';
-import { Clock, Check, X, User, Phone, MapPin, ClipboardList, AlertCircle } from 'lucide-react';
+import { Clock, Check, X, User, Phone, MapPin, ClipboardList, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 
 export default function LiveOrderMonitor() {
   const queryClient = useQueryClient();
@@ -13,7 +13,7 @@ export default function LiveOrderMonitor() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['live-orders'],
     queryFn: async () => {
-      const res = await axios.get('http://localhost:5000/api/v1/orders/live'); 
+      const res = await axios.get('http://localhost:5000/api/v1/orders/live', { withCredentials: true }); 
       return res.data.data || []; 
     }
   });
@@ -37,13 +37,37 @@ export default function LiveOrderMonitor() {
   }, [socket, queryClient, playAlert]);
 
   const handleStatusTransition = async (orderId, targetStatus) => {
+    let rejectReason = "";
+
+    // 🛑 If status is REJECTED, prompt the user for a clear operational reason
+    if (targetStatus === 'REJECTED') {
+      const reason = prompt("Please enter the reason for rejection (e.g., Item Out of Stock, Kitchen Closed):");
+      if (reason === null) return; // User cancelled prompt execution
+      if (!reason.trim()) {
+        alert("Rejection reason is mandatory!");
+        return;
+      }
+      rejectReason = reason.trim();
+    }
+
     try {
-      await axios.patch(`http://localhost:5000/api/v1/orders/${orderId}/status`, { status: targetStatus });
+      // API payload structured with optional rejection token parameters
+      const res = await axios.patch(
+        `http://localhost:5000/api/v1/orders/${orderId}/status`, 
+        { status: targetStatus, rejectReason },
+        { withCredentials: true }
+      );
+
+      const updatedOrderFromBackend = res.data.data;
+
+      // 🔄 Update state in cache directly without removing/hiding the component card structure
       queryClient.setQueryData(['live-orders'], (oldOrders) =>
-        (oldOrders || []).filter((order) => order._id !== orderId)
+        (oldOrders || []).map((order) => 
+          order._id === orderId ? { ...order, status: targetStatus, rejectReason: updatedOrderFromBackend?.rejectReason || rejectReason } : order
+        )
       );
     } catch (err) {
-      console.error(err);
+      console.error("Error transitioning state context pipeline:", err);
     }
   };
 
@@ -87,7 +111,9 @@ export default function LiveOrderMonitor() {
           {orders.map((order) => (
             <div 
               key={order._id} 
-              className="bg-white rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden relative group"
+              className={`bg-white rounded-2xl border shadow-xs hover:shadow-md transition-all duration-200 flex flex-col overflow-hidden relative group ${
+                order.status === 'REJECTED' ? 'border-rose-200/80 opacity-90' : 'border-slate-200/80'
+              }`}
             >
               {/* Card Ribbon Style Premium Header */}
               <div className="bg-slate-900 px-5 py-4 flex justify-between items-center text-white">
@@ -129,7 +155,6 @@ export default function LiveOrderMonitor() {
                         className="flex justify-between items-center text-xs text-slate-700 bg-white p-2.5 rounded-xl border border-slate-100 hover:border-slate-200 transition-colors"
                       >
                         <div className="flex items-center gap-2">
-                          {/* Standard Veg/Non-Veg Visual Indicator Box placeholder markup */}
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-xs" title="Veg Indicator Item" />
                           <span className="font-semibold text-slate-800">
                             {item.name} 
@@ -141,6 +166,14 @@ export default function LiveOrderMonitor() {
                     ))}
                   </div>
                 </div>
+
+                {/* Rejection Notification Indicator Banner (Only shows up if rejected) */}
+                {order.status === 'REJECTED' && order.rejectReason && (
+                  <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-2 text-[11px] text-rose-700 font-medium">
+                    <AlertCircle size={14} className="shrink-0 mt-0.5 text-rose-500" />
+                    <span><strong>Reason:</strong> {order.rejectReason}</span>
+                  </div>
+                )}
               </div>
 
               {/* Total Aggregate Calculation Summary Divider */}
@@ -150,21 +183,44 @@ export default function LiveOrderMonitor() {
               </div>
 
               {/* Dual Layout State Execution Control Operations */}
-              <div className="p-5 bg-slate-50/60 border-t border-slate-100 flex gap-3">
-                <button 
-                  type="button" 
-                  onClick={() => handleStatusTransition(order._id, 'REJECTED')} 
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-rose-600 hover:border-rose-200 py-3 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs active:scale-[0.98]"
-                >
-                  <X size={14} strokeWidth={3} /> Decline
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => handleStatusTransition(order._id, 'ACCEPTED')} 
-                  className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl text-xs font-black hover:opacity-95 transition-all cursor-pointer shadow-sm shadow-emerald-500/10 active:scale-[0.98]"
-                >
-                  <Check size={14} strokeWidth={3} /> Accept Order
-                </button>
+              <div className="p-5 bg-slate-50/60 border-t border-slate-100">
+                {order.status === 'PENDING' ? (
+                  <div className="flex gap-3">
+                    <button 
+                      type="button" 
+                      onClick={() => handleStatusTransition(order._id, 'REJECTED')} 
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:text-rose-600 hover:border-rose-200 py-3 rounded-xl text-xs font-black transition-all cursor-pointer shadow-xs active:scale-[0.98]"
+                    >
+                      <X size={14} strokeWidth={3} /> Decline
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => handleStatusTransition(order._id, 'ACCEPTED')} 
+                      className="flex-1 flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white py-3 rounded-xl text-xs font-black hover:opacity-95 transition-all cursor-pointer shadow-sm shadow-emerald-500/10 active:scale-[0.98]"
+                    >
+                      <Check size={14} strokeWidth={3} /> Accept Order
+                    </button>
+                  </div>
+                ) : (
+                  /* Non-editable static state UI badges block */
+                  <div className="w-full">
+                    {order.status === 'ACCEPTED' && (
+                      <div className="w-full flex items-center justify-center gap-2 bg-emerald-50 text-emerald-700 border border-emerald-200/80 py-3 rounded-xl text-xs font-black select-none tracking-wide uppercase">
+                        <CheckCircle size={15} /> Order Accepted
+                      </div>
+                    )}
+                    {order.status === 'REJECTED' && (
+                      <div className="w-full flex items-center justify-center gap-2 bg-rose-50 text-rose-700 border border-rose-200/80 py-3 rounded-xl text-xs font-black select-none tracking-wide uppercase">
+                        <XCircle size={15} /> Order Declined
+                      </div>
+                    )}
+                    {order.status === 'COMPLETED' && (
+                      <div className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white py-3 rounded-xl text-xs font-black select-none tracking-wide uppercase">
+                        <CheckCircle size={15} /> Order Completed
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           ))}

@@ -1,15 +1,18 @@
 import { useAuth } from '../../context/AuthContext';
 import { QrCode, Link2, Download, Printer, Copy, CheckCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import { QRCodeCanvas } from 'qrcode.react'; // ⚡ Local client-side generation package
 
 export default function StoreSettings() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(false);
+  const [tableNumber, setTableNumber] = useState('1'); // 💡 Scalable Table Selection Feature
+  const qrRef = useRef(null);
 
-  // 🎯 Target Restaurant Mapping Fallbacks
   const targetRestaurantId = user?.restaurantId || user?._id || 'default-store';
-  const liveMenuUrl = `${window.location.origin}/public/catalog/${targetRestaurantId}`;
-  const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(liveMenuUrl)}`;
+  
+  // 🎯 Production Routing Matrix (Appends Table Context seamlessly for checkout automation)
+  const liveMenuUrl = `${window.location.origin}/catalog/${targetRestaurantId}?table=${tableNumber}`;
 
   const handleCopyLink = async () => {
     try {
@@ -21,8 +24,27 @@ export default function StoreSettings() {
     }
   };
 
+  // 📥 Pure Offline High-Res Download Handler
+  const handleDownloadQR = () => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    
+    const url = canvas.toDataURL("image/png");
+    const link = document.createElement('a');
+    link.download = `${user?.restaurantName || 'restaurant'}-table-${tableNumber}-qr.png`;
+    link.href = url;
+    link.click();
+  };
+
+  // 🖨️ Synchronous Print Layout Frame Generation
   const handlePrint = () => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const qrImageDataUrl = canvas.toDataURL("image/png");
+
     const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    
     printWindow.document.write(`
       <html>
         <head>
@@ -33,7 +55,8 @@ export default function StoreSettings() {
             .container { max-width: 420px; margin: 0 auto; border: 2px solid #f1f5f9; border-radius: 32px; padding: 40px 30px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
             .logo { font-size: 14px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; color: #94a3b8; margin-bottom: 25px; }
             .title { font-size: 26px; font-weight: 900; color: #e11d48; margin-bottom: 8px; letter-spacing: -0.5px; }
-            .subtitle { font-size: 14px; color: #64748b; font-weight: 500; margin-bottom: 35px; }
+            .subtitle { font-size: 14px; color: #64748b; font-weight: 500; margin-bottom: 25px; }
+            .table-badge { display: inline-block; background: #e11d48; color: white; font-weight: 900; padding: 6px 16px; border-radius: 50px; font-size: 14px; margin-bottom: 25px; text-transform: uppercase; }
             .qr-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; display: inline-block; border-radius: 24px; margin-bottom: 35px; }
             .qr-img { width: 240px; height: 240px; display: block; }
             .footer-tag { font-size: 11px; font-weight: 700; color: #cbd5e1; letter-spacing: 1px; text-transform: uppercase; }
@@ -44,8 +67,10 @@ export default function StoreSettings() {
             <div class="logo">Chotu AI+ Partner</div>
             <h1 class="title">${user?.restaurantName || 'Our Restaurant'}</h1>
             <p class="subtitle">Scan QR Code to Order Directly from Table</p>
+            <div class="table-badge">TABLE ${tableNumber}</div>
+            <br/>
             <div class="qr-box">
-              <img src="${qrCodeApiUrl}" class="qr-img" />
+              <img src="${qrImageDataUrl}" class="qr-img" />
             </div>
             <div class="footer-tag">✦ Powered by Chotu AI+ Hub ✦</div>
           </div>
@@ -63,7 +88,7 @@ export default function StoreSettings() {
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Top Welcome Title Banner Layout */}
+      {/* Top Banner Layout */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Store Settings & QR Engine</h1>
@@ -77,17 +102,32 @@ export default function StoreSettings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Side: Modern Minimalist QR Code Frame Visualizer Component */}
-        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs flex flex-col items-center text-center space-y-6">
+        {/* Left Side: Dynamic QR Canvas Visualization Controller */}
+        <div className="lg:col-span-4 bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs flex flex-col items-center text-center space-y-5">
           <span className="text-[10px] font-black tracking-widest text-slate-400 uppercase bg-slate-50 border border-slate-100 px-3 py-1 rounded-md w-full">
             Live QR Code Preview
           </span>
 
-          <div className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner group relative">
-            <img 
-              src={qrCodeApiUrl} 
-              alt="Live Menu Store QR Code" 
-              className="w-44 h-44 rounded-xl object-contain bg-white p-2 border border-slate-200/40 shadow-xs group-hover:scale-[1.02] transition-transform duration-200" 
+          {/* 💡 Operational Input: Table Identifier Selection Configuration */}
+          <div className="w-full flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200/40">
+            <label className="text-xs font-black text-slate-700 pl-1">Target Table:</label>
+            <input 
+              type="number" 
+              min="1" 
+              value={tableNumber} 
+              onChange={(e) => setTableNumber(e.target.value || '1')}
+              className="w-20 bg-white border border-slate-200 rounded-lg px-2 py-1 text-center font-bold text-xs focus:outline-rose-500"
+            />
+          </div>
+
+          {/* Hidden reference wrapper rendering target canvas module completely local */}
+          <div ref={qrRef} className="bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-inner group relative">
+            <QRCodeCanvas 
+              value={liveMenuUrl}
+              size={176}
+              level={"H"}
+              includeMargin={false}
+              className="rounded-xl object-contain bg-white p-2 border border-slate-200/40 shadow-xs group-hover:scale-[1.02] transition-transform duration-200"
             />
           </div>
 
@@ -99,26 +139,18 @@ export default function StoreSettings() {
               <Printer size={14} strokeWidth={2.5} /> Print Table QR Stand
             </button>
             
-            <a 
-              href={qrCodeApiUrl} 
-              download={`${user?.restaurantName || 'restaurant'}-qr.png`} 
-              target="_blank" 
-              rel="noreferrer" 
-              className="block w-full"
+            <button 
+              type="button"
+              onClick={handleDownloadQR}
+              className="w-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 py-3.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
             >
-              <button 
-                type="button"
-                className="w-full bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 py-3.5 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Download size={14} strokeWidth={2.5} /> Download High-Res PNG
-              </button>
-            </a>
+              <Download size={14} strokeWidth={2.5} /> Download High-Res PNG
+            </button>
           </div>
         </div>
 
         {/* Right Side: Deep Configuration Controls Info Boards Grid */}
         <div className="lg:col-span-8 space-y-6">
-          {/* Box Variant A: Digital Menu Clipboard Controller */}
           <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
               <div className="p-2 bg-rose-50 text-rose-600 rounded-xl">
@@ -157,7 +189,7 @@ export default function StoreSettings() {
             </div>
           </div>
 
-          {/* Box Variant B: Instructional Terminal Operational Guidelines */}
+          {/* Guidelines Board */}
           <div className="bg-white rounded-2xl border border-slate-200/60 p-6 shadow-xs space-y-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100">
               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -172,14 +204,14 @@ export default function StoreSettings() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
               <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 text-center md:text-left">
                 <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs mx-auto md:mx-0 mb-2">1</span>
-                <h4 className="font-bold text-xs text-slate-800">Print Stands</h4>
-                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">Direct counter ya table acrylic frames me fitting ke liye custom templates use karein.</p>
+                <h4 className="font-bold text-xs text-slate-800">Dynamic Tables</h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">Table number badalkar unka alag dynamic stand print karein taaki kitchen me accurate tracking ho sake.</p>
               </div>
               
               <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 text-center md:text-left">
                 <span className="w-6 h-6 rounded-full bg-slate-900 text-white flex items-center justify-center font-black text-xs mx-auto md:mx-0 mb-2">2</span>
-                <h4 className="font-bold text-xs text-slate-800">Zero App Downloads</h4>
-                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">Customer apne phone camera standard se scan karke high-speed food cart access kar payega.</p>
+                <h4 className="font-bold text-xs text-slate-800">Zero Network Lag</h4>
+                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-relaxed">QR codes locally create hote hain. Agar internet thoda slow bhi ho, toh generation fail nahi hogi.</p>
               </div>
 
               <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 text-center md:text-left">
