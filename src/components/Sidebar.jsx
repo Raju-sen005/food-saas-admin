@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, ShoppingBag, Utensils, Settings } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Utensils, Settings,Clock } from 'lucide-react';
 
 export default function Sidebar() {
   const navItems = [
@@ -7,6 +7,7 @@ export default function Sidebar() {
     { to: '/orders', icon: <ShoppingBag size={20} />, label: 'Live Orders' },
     { to: '/menu', icon: <Utensils size={20} />, label: 'Menu Catalog' },
     { to: '/settings', icon: <Settings size={20} />, label: 'Settings' },
+    { to: '/table-monitor', icon: <Clock size={20} />, label: 'Table Monitor' },
   ];
 
   return (
