@@ -11,7 +11,7 @@ import StoreSettings from "./features/settings/StoreSettings";
 import PublicMenu from "./features/public/PublicMenu"; // Customer Isolated View
 import { useAuth } from "./context/AuthContext";
 import TableMonitor from "./components/TableMonitor"; // Live Table Monitor
-
+import SuperAdminPanel from "./features/admin/SuperAdminPanel"; // 
 export default function App() {
   const { user, login } = useAuth();
   const [authView, setAuthView] = useState("LOGIN");
@@ -113,6 +113,7 @@ export default function App() {
                 >
                   Enter Dashboard Control
                 </button>
+                {console.log("Click Login Button")}
               </form>
 
               <div className="text-center pt-2">
@@ -184,6 +185,7 @@ export default function App() {
               <Route path="/menu" element={<MenuCatalog />} />
               <Route path="/settings" element={<StoreSettings />} />
               <Route path="/table-monitor" element={<TableMonitor />} />
+              <Route path="/super-admin" element={<SuperAdminPanel />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </main>

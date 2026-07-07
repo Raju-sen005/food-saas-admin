@@ -1,21 +1,19 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
   ShoppingBag,
-  Clock,
-  MapPin,
   Star,
   Plus,
   Minus,
   X,
-  Bike,
-  Store,
-  Info,
   CheckCircle2,
+  Utensils,
+  AlertCircle,
+  User,
+  Phone,
 } from "lucide-react";
-import { useSearchParams } from "react-router-dom"; // 👈 Import ye karein
 
 export default function PublicMenu() {
   const { restaurantId } = useParams();
@@ -25,11 +23,28 @@ export default function PublicMenu() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("ALL");
 
-  const [orderType, setOrderType] = useState("DELIVERY");
+  const [orderType, setOrderType] = useState("PICKUP");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 👇 Touched state — taaki error tabhi dikhe jab user field ko chhu chuka ho
+  const [touched, setTouched] = useState({ name: false, phone: false });
+
+  const isValidName = /^[A-Za-z ]{3,50}$/.test(customerName.trim());
+  const isValidPhone = /^[6-9]\d{9}$/.test(customerPhone.trim());
+  const isValidAddress =
+    orderType !== "DELIVERY" || deliveryAddress.trim().length > 4;
+
+  // 👇 Master check — jb tak ye sab true na ho, submit button disable rahega
+  const isFormValid =
+    isValidName && isValidPhone && isValidAddress && totalItemsCountSafe(cart);
+
+  function totalItemsCountSafe(c) {
+    return Object.values(c).reduce((acc, item) => acc + item.quantity, 0) > 0;
+  }
 
   const {
     data: catalog,
@@ -119,12 +134,10 @@ export default function PublicMenu() {
   const handleFinalOrderSubmit = async (e) => {
     e.preventDefault();
 
-    if (!customerName.trim() || !customerPhone.trim()) {
-      alert("Please enter your Name and Mobile Number!");
-      return;
-    }
-    if (orderType === "DELIVERY" && !deliveryAddress.trim()) {
-      alert("Delivery address is required for home delivery!");
+    // Mark sab touched — safety net agar form disabled state se bhi bypass ho jaye
+    setTouched({ name: true, phone: true });
+
+    if (!isValidName || !isValidPhone || !isValidAddress) {
       return;
     }
 
@@ -148,6 +161,7 @@ export default function PublicMenu() {
     };
 
     try {
+      setIsSubmitting(true);
       const res = await axios.post(
         "http://localhost:5000/api/v1/orders/place",
         orderPayload,
@@ -160,6 +174,7 @@ export default function PublicMenu() {
         setCustomerName("");
         setCustomerPhone("");
         setDeliveryAddress("");
+        setTouched({ name: false, phone: false });
         setIsCartOpen(false);
       }
     } catch (err) {
@@ -167,6 +182,8 @@ export default function PublicMenu() {
         err.response?.data?.message ||
           "Internal validation check mismatch error.",
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -206,6 +223,9 @@ export default function PublicMenu() {
     );
   };
 
+  const nameHasError = touched.name && !isValidName;
+  const phoneHasError = touched.phone && !isValidPhone;
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-28 antialiased font-sans max-w-md mx-auto shadow-sm relative border-x border-slate-200/40">
       {/* Premium Food Engine Corporate Brand Layout Header */}
@@ -230,17 +250,6 @@ export default function PublicMenu() {
               <span className="flex items-center text-[10px] bg-amber-50 text-amber-700 font-extrabold px-1.5 py-0.5 rounded-md border border-amber-200/40 shrink-0">
                 <Star size={10} className="fill-amber-600 mr-0.5" /> 4.2
               </span>
-            </div>
-            <div className="text-[11px] text-slate-400 font-medium space-y-0.5 mt-0.5">
-              {restaurant?.address && (
-                <p className="flex items-center gap-1 truncate">
-                  <MapPin size={11} /> {restaurant.address}
-                </p>
-              )}
-              <p className="flex items-center gap-1 text-emerald-600 font-semibold">
-                <Clock size={11} />{" "}
-                <span>{restaurant?.timings || "11:00 AM - 11:00 PM"}</span>
-              </p>
             </div>
           </div>
         </div>
@@ -426,26 +435,20 @@ export default function PublicMenu() {
             <form
               onSubmit={handleFinalOrderSubmit}
               className="p-4 space-y-5 flex-1 text-slate-700"
+              noValidate
             >
               {/* Order Mode Mappings */}
               <div className="space-y-2">
                 <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
                   Fulfillment Preference
                 </span>
-                <div className="grid grid-cols-2 gap-2 bg-slate-100 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setOrderType("DELIVERY")}
-                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-black tracking-tight transition-all cursor-pointer ${orderType === "DELIVERY" ? "bg-white text-rose-500 shadow-xs" : "text-slate-500"}`}
-                  >
-                    <Bike size={13} strokeWidth={2.5} /> Delivery
-                  </button>
+                <div className="grid grid-cols-1 gap-2 bg-slate-100 p-1 rounded-xl">
                   <button
                     type="button"
                     onClick={() => setOrderType("PICKUP")}
                     className={`flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-black tracking-tight transition-all cursor-pointer ${orderType === "PICKUP" ? "bg-white text-rose-500 shadow-xs" : "text-slate-500"}`}
                   >
-                    <Store size={13} strokeWidth={2.5} /> Self-Pickup
+                    <Utensils size={13} strokeWidth={2.5} /> Dine-In
                   </button>
                 </div>
               </div>
@@ -455,24 +458,106 @@ export default function PublicMenu() {
                 <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
                   Contact Documentation
                 </span>
-                <div className="grid grid-cols-1 gap-2">
-                  <input
-                    type="text"
-                    required
-                    placeholder="Full Name"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    className="w-full px-4 py-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 bg-slate-50/50"
-                  />
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Active Phone Number"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    className="w-full px-4 py-3 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/10 bg-slate-50/50"
-                  />
+                <div className="grid grid-cols-1 gap-2.5">
+                  {/* Name field */}
+                  <div>
+                    <div className="relative">
+                      <User
+                        size={14}
+                        strokeWidth={2.5}
+                        className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${
+                          nameHasError
+                            ? "text-rose-400"
+                            : isValidName
+                              ? "text-emerald-500"
+                              : "text-slate-300"
+                        }`}
+                      />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Full Name"
+                        value={customerName}
+                        onChange={(e) => setCustomerName(e.target.value)}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, name: true }))
+                        }
+                        className={`w-full pl-10 pr-9 py-3 text-xs rounded-xl border bg-slate-50/50 focus:outline-none focus:ring-4 transition-colors ${
+                          nameHasError
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
+                            : isValidName
+                              ? "border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/10"
+                              : "border-slate-200 focus:border-rose-500 focus:ring-rose-500/10"
+                        }`}
+                      />
+                      {isValidName && (
+                        <CheckCircle2
+                          size={14}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100"
+                        />
+                      )}
+                    </div>
+                    {nameHasError && (
+                      <p className="flex items-center gap-1 text-[10px] font-bold text-rose-500 mt-1 pl-1">
+                        <AlertCircle size={11} strokeWidth={2.5} />
+                        Enter a valid name (3-50 letters, spaces allowed)
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Phone field */}
+                  <div>
+                    <div className="relative">
+                      <Phone
+                        size={14}
+                        strokeWidth={2.5}
+                        className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${
+                          phoneHasError
+                            ? "text-rose-400"
+                            : isValidPhone
+                              ? "text-emerald-500"
+                              : "text-slate-300"
+                        }`}
+                      />
+                      <input
+                        type="tel"
+                        required
+                        inputMode="numeric"
+                        maxLength={10}
+                        placeholder="Active Phone Number"
+                        value={customerPhone}
+                        onChange={(e) =>
+                          setCustomerPhone(
+                            e.target.value.replace(/\D/g, "").slice(0, 10),
+                          )
+                        }
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, phone: true }))
+                        }
+                        className={`w-full pl-10 pr-9 py-3 text-xs rounded-xl border bg-slate-50/50 focus:outline-none focus:ring-4 transition-colors ${
+                          phoneHasError
+                            ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
+                            : isValidPhone
+                              ? "border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/10"
+                              : "border-slate-200 focus:border-rose-500 focus:ring-rose-500/10"
+                        }`}
+                      />
+                      {isValidPhone && (
+                        <CheckCircle2
+                          size={14}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100"
+                        />
+                      )}
+                    </div>
+                    {phoneHasError && (
+                      <p className="flex items-center gap-1 text-[10px] font-bold text-rose-500 mt-1 pl-1">
+                        <AlertCircle size={11} strokeWidth={2.5} />
+                        Enter a valid 10-digit number starting with 6-9
+                      </p>
+                    )}
+                  </div>
                 </div>
+
                 {orderType === "DELIVERY" && (
                   <textarea
                     required
@@ -554,10 +639,22 @@ export default function PublicMenu() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-xs py-3.5 rounded-xl shadow-md shadow-emerald-600/10 transition-all cursor-pointer active:scale-[0.99] tracking-wider uppercase"
+                  disabled={!isFormValid || isSubmitting}
+                  className={`w-full font-black text-xs py-3.5 rounded-xl shadow-md transition-all tracking-wider uppercase ${
+                    !isFormValid || isSubmitting
+                      ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                      : "bg-gradient-to-r from-emerald-500 to-teal-600 text-white cursor-pointer shadow-emerald-600/10 active:scale-[0.99]"
+                  }`}
                 >
-                  Confirm Order • ₹{totalCartAmount.toLocaleString("en-IN")}
+                  {isSubmitting
+                    ? "Placing Order..."
+                    : `Confirm Order • ₹${totalCartAmount.toLocaleString("en-IN")}`}
                 </button>
+                {!isFormValid && (
+                  <p className="text-center text-[10px] font-bold text-slate-400 mt-2">
+                    Enter your name and mobile number to continue
+                  </p>
+                )}
               </div>
             </form>
           </div>
