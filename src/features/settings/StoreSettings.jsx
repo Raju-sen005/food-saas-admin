@@ -15,7 +15,7 @@ import { QRCodeCanvas } from "qrcode.react";
 export default function StoreSettings() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(null);
-
+  const qrRefs = useRef({});
   // 1. Load tables from localStorage or default to ["1"]
   const [tables, setTables] = useState(() => {
     const saved = localStorage.getItem(`tables_${user?.restaurantId}`);
@@ -23,6 +23,39 @@ export default function StoreSettings() {
   });
 
   const targetRestaurantId = user?.restaurantId || user?._id || "default-store";
+
+  // 2. DOWNLOAD FUNCTION
+  const downloadQRCode = (tableNo) => {
+    const canvas = qrRefs.current[tableNo];
+    const pngUrl = canvas
+      .toDataURL("image/png")
+      .replace("image/png", "image/octet-stream");
+    let downloadLink = document.createElement("a");
+    downloadLink.href = pngUrl;
+    downloadLink.download = `Table_${tableNo}_QR.png`;
+    document.body.appendChild(downloadLink);
+    downloadLink.click();
+    document.body.removeChild(downloadLink);
+  };
+
+  const printQRCode = (tableNo) => {
+    const canvas = qrRefs.current[tableNo];
+    const dataUrl = canvas.toDataURL("image/png");
+    const windowContent = `
+      <html>
+        <head><title>Print Table ${tableNo} QR</title></head>
+        <body style="display:flex; flex-direction:column; align-items:center; justify-center:center; height:100vh;">
+          <h1 style="font-family:sans-serif;">Scan to Order - Table ${tableNo}</h1>
+          <img src="${dataUrl}" />
+        </body>
+      </html>`;
+    const printWindow = window.open("", "_blank");
+    printWindow.document.open();
+    printWindow.document.write(windowContent);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
 
   // 2. Persist tables to localStorage whenever they change
   useEffect(() => {
@@ -94,7 +127,12 @@ export default function StoreSettings() {
               </div>
 
               <div className="flex justify-center p-4 bg-slate-50 rounded-xl">
-                <QRCodeCanvas value={url} size={150} level={"H"} />
+                <QRCodeCanvas
+                  ref={(el) => (qrRefs.current[tableNo] = el)}
+                  value={url}
+                  size={150}
+                  level={"H"}
+                />
               </div>
 
               <button
@@ -112,6 +150,20 @@ export default function StoreSettings() {
                 )}
                 {copied === tableNo ? "Copied!" : "Copy Link"}
               </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => downloadQRCode(tableNo)}
+                  className="flex-1 py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
+                >
+                  <Download size={14} /> Download
+                </button>
+                <button
+                  onClick={() => printQRCode(tableNo)}
+                  className="flex-1 py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
+                >
+                  <Printer size={14} /> Print
+                </button>
+              </div>
             </div>
           );
         })}

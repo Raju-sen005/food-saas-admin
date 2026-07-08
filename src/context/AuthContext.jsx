@@ -1,9 +1,11 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+/* eslint-disable react-refresh/only-export-components */
+
+import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
 
 const AuthContext = createContext(null);
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'http://localhost:5000/api/v1';
+axios.defaults.baseURL = "http://localhost:5000/api/v1";
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -12,9 +14,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const verifySession = async () => {
       try {
-        const res = await axios.get('/auth/me');
+        const res = await axios.get("/auth/me");
         if (res.data.success) setUser(res.data.data);
-      } catch (err) {
+      } catch  {
         setUser(null);
       } finally {
         setLoading(false);
@@ -24,14 +26,14 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
-    const res = await axios.post('/auth/login', { email, password });
+    const res = await axios.post("/auth/login", { email, password });
     if (res.data.success) setUser(res.data.data);
     return res.data;
   };
 
   // --- NEW: TENANT SIGNUP BINDER ---
   const registerTenant = async (formData) => {
-    const res = await axios.post('/auth/register', formData);
+    const res = await axios.post("/auth/register", formData);
     if (res.data.success) setUser(res.data.data.user);
     return res.data; // Isme restaurant details aur unique slug return hoga
   };

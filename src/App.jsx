@@ -11,7 +11,7 @@ import StoreSettings from "./features/settings/StoreSettings";
 import PublicMenu from "./features/public/PublicMenu"; // Customer Isolated View
 import { useAuth } from "./context/AuthContext";
 import TableMonitor from "./components/TableMonitor"; // Live Table Monitor
-import SuperAdminPanel from "./features/admin/SuperAdminPanel"; // 
+import SuperAdminPanel from "./features/admin/SuperAdminPanel"; //
 export default function App() {
   const { user, login } = useAuth();
   const [authView, setAuthView] = useState("LOGIN");
@@ -163,7 +163,7 @@ export default function App() {
 
         {/* Dynamic Inner Layout Content Viewport */}
         <div className="flex-1 w-full lg:pl-64 flex flex-col min-h-screen">
-          <header className="sticky top-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 px-4 lg:px-8 h-16 flex items-center justify-between">
+          <header className=" top-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 px-4 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
