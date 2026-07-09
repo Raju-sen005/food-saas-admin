@@ -22,7 +22,7 @@ export default function PublicMenu() {
   const [cart, setCart] = useState({});
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState("ALL");
-
+  const [searchQuery, setSearchQuery] = useState("");
   const [orderType, setOrderType] = useState("PICKUP");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -130,7 +130,15 @@ export default function PublicMenu() {
     (acc, item) => acc + item.price * item.quantity,
     0,
   );
+  // 2. Filter logic add karein (items aur combos ke liye):
+  const filteredCombos = combos?.filter((c) =>
+    c.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
+  const getFilteredItems = (items) =>
+    items?.filter((i) =>
+      i.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
   const handleFinalOrderSubmit = async (e) => {
     e.preventDefault();
 
@@ -254,6 +262,27 @@ export default function PublicMenu() {
           </div>
         </div>
 
+        {/* Search Bar Component */}
+      <div className="px-4 pb-4 bg-white">
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="Search for your favorite dishes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-100 border border-slate-200 text-xs font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      </div>
+
         {/* Categories Tab Roller Component */}
         <div className="border-t border-slate-100 bg-white">
           <div className="px-4 py-2.5 flex gap-1.5 overflow-x-auto no-scrollbar">
@@ -296,6 +325,8 @@ export default function PublicMenu() {
         </div>
       </div>
 
+      
+
       {/* Main Menu Grid / Items Core Containers */}
       <div className="p-4 space-y-6">
         {/* Combos Visual Blocks Layer */}
@@ -305,33 +336,37 @@ export default function PublicMenu() {
               <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-1">
                 ✨ Best Value Combos
               </h2>
-              {combos.map((combo) => (
-                <div
-                  key={combo._id}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex justify-between items-center gap-4"
-                >
-                  <div className="space-y-1 min-w-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block border border-white shadow-xs" />
-                    <h3 className="font-black text-sm text-slate-900 tracking-tight">
-                      {combo.name}
-                    </h3>
-                    <p className="text-xs text-slate-400 font-medium line-clamp-2 leading-relaxed">
-                      {combo.description}
-                    </p>
-                    <p className="text-sm font-black text-slate-900 pt-0.5">
-                      ₹{combo.price}
-                    </p>
+
+              {/* Horizontal Scrollable Container */}
+              <div className="flex gap-3 overflow-x-auto pb-2 -mr-4 pr-4 no-scrollbar">
+                {filteredCombos.map((combo) => (
+                  <div
+                    key={combo._id}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex flex-col justify-between gap-3 shrink-0 w-[240px]"
+                  >
+                    <div className="space-y-1">
+                      <h3 className="font-black text-sm text-slate-900 tracking-tight truncate">
+                        {combo.name}
+                      </h3>
+                      <p className="text-[11px] text-slate-400 font-medium line-clamp-2 leading-relaxed h-[28px]">
+                        {combo.description}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-sm font-black text-slate-900">
+                        ₹{combo.price}
+                      </p>
+                      <QuantityController
+                        id={combo._id}
+                        name={combo.name}
+                        price={combo.price}
+                        type="combo"
+                      />
+                    </div>
                   </div>
-                  <div className="shrink-0">
-                    <QuantityController
-                      id={combo._id}
-                      name={combo.name}
-                      price={combo.price}
-                      type="combo"
-                    />
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
 
@@ -344,11 +379,11 @@ export default function PublicMenu() {
             )
             .map((categoryName) => (
               <div key={categoryName} className="space-y-3">
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                {/* <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
                   {categoryName}
-                </h2>
+                </h2> */}
                 <div className="space-y-3">
-                  {categories[categoryName].map((item) => (
+                  {getFilteredItems(categories[categoryName]).map((item) => (
                     <div
                       key={item._id}
                       className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex gap-4 items-center justify-between"
@@ -479,9 +514,7 @@ export default function PublicMenu() {
                         placeholder="Full Name"
                         value={customerName}
                         onChange={(e) => setCustomerName(e.target.value)}
-                        onBlur={() =>
-                          setTouched((t) => ({ ...t, name: true }))
-                        }
+                        onBlur={() => setTouched((t) => ({ ...t, name: true }))}
                         className={`w-full pl-10 pr-9 py-3 text-xs rounded-xl border bg-slate-50/50 focus:outline-none focus:ring-4 transition-colors ${
                           nameHasError
                             ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
