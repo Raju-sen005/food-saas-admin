@@ -6,12 +6,12 @@ import {
   UtensilsCrossed,
   Edit2,
   Trash2,
-  Layers,
+  // Layers,
   IndianRupee,
   Image,
 } from "lucide-react";
-import Card from "../../components/ui/Card";
-import Button from "../../components/ui/Button";
+// import Card from "../../components/ui/Card";
+// import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 
@@ -131,6 +131,17 @@ export default function MenuCatalog() {
     },
   });
 
+  const deleteComboMutation = useMutation({
+    mutationFn: async (comboId) => {
+      return await axios.delete(
+        `http://localhost:5000/api/v1/menu/admin/combos/${comboId}`,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu-items"]);
+    },
+  });
+
   const handleOpenAddModal = () => {
     setEditingItem(null);
     setIsModalOpen(true);
@@ -141,8 +152,18 @@ export default function MenuCatalog() {
     setName(item.name);
     setDescription(item.description || "");
     setPrice(item.price);
-    setCategory(item.category);
+    setCategory(item.category || "");
     setImage(item.image || "");
+
+    if (item.isCombo) {
+      setFormMode("COMBO");
+      // Combo ke selected items ko restore karein
+      setSelectedItems(item.items || []);
+    } else {
+      setFormMode("DISH");
+      setSelectedItems([]);
+    }
+
     setIsModalOpen(true);
   };
 
@@ -168,22 +189,72 @@ export default function MenuCatalog() {
     },
   });
 
+  const updateComboMutation = useMutation({
+    mutationFn: async ({ id, data }) => {
+      return await axios.patch(
+        `http://localhost:5000/api/v1/menu/admin/combos/${id}`,
+        data,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(["menu-items"]);
+      closeAndResetModal();
+    },
+  });
+
+  // 1. Price auto-calculate karne ke liye helper function
+  const calculateComboPrice = (selectedItemIds) => {
+    const selectedItemsDetails = menuItems.items.filter((item) =>
+      selectedItemIds.includes(item._id),
+    );
+    return selectedItemsDetails.reduce(
+      (sum, item) => sum + (Number(item.price) || 0),
+      0,
+    );
+  };
+
+  // 2. Form submit handler update karein
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (formMode === "DISH") {
-      upsertMutation.mutate({ name, category, price, description, image });
+
+    const payload = {
+      name,
+      description,
+      price: formMode === "COMBO" ? calculateComboPrice(selectedItems) : price,
+      image,
+      ...(formMode === "DISH" && { category }),
+      ...(formMode === "COMBO" && { items: selectedItems }),
+    };
+
+    if (editingItem) {
+      // Edit mode: check karein ki combo hai ya dish
+      if (formMode === "COMBO") {
+        // Combo update mutation call karein
+        // (Yahan aapko updateComboMutation banana padega agar nahi hai)
+        updateComboMutation.mutate({ id: editingItem._id, data: payload });
+      } else {
+        upsertMutation.mutate(payload);
+      }
     } else {
-      comboMutation.mutate({ name, description, items: selectedItems, price });
+      // Create mode
+      if (formMode === "DISH") {
+        upsertMutation.mutate(payload);
+      } else {
+        comboMutation.mutate(payload);
+      }
     }
   };
 
-  const handleDeleteClick = (id) => {
-    if (
-      window.confirm(
-        "Are you sure you want to discard this item from live listing?",
-      )
-    ) {
-      deleteMutation.mutate(id);
+  // Naya delete handler jo type check karega
+  const handleDeleteClick = (item) => {
+    if (window.confirm("Are you sure you want to discard this item?")) {
+      if (item.isCombo) {
+        // Combo delete mutation call karein
+        deleteComboMutation.mutate(item._id);
+      } else {
+        // Single dish delete mutation call karein
+        deleteMutation.mutate(item._id);
+      }
     }
   };
 
@@ -270,18 +341,25 @@ export default function MenuCatalog() {
               )}
               <div className="p-5 flex gap-4 items-start">
                 {/* Square Proportional Food Image Render Box Frame Layout */}
+                {/* Combo Image Display Logic */}
                 <div className="w-20 h-20 rounded-xl bg-slate-50 border border-slate-100 shrink-0 overflow-hidden relative flex items-center justify-center text-slate-300">
-                  {item.image ? (
+                  {item.isCombo ? (
+                    // Combo ke liye custom icon ya pehle item ki image
+                    // <Layers size={24} strokeWidth={1.5} />
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : item.image ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <Image size={24} strokeWidth={1.5} />
+                    <Image size={24} />
                   )}
-                  {/* Subtle Veg Indicator Top overlay box marker node */}
-                  <span className="absolute top-1.5 left-1.5 w-2 h-2 rounded-full bg-emerald-500 border border-white shadow-xs" />
                 </div>
 
                 {/* Text Data Strings Descriptions Context Bounds */}
@@ -320,7 +398,7 @@ export default function MenuCatalog() {
                     <Edit2 size={13} strokeWidth={2.5} />
                   </button>
                   <button
-                    onClick={() => handleDeleteClick(item._id)}
+                    onClick={() => handleDeleteClick(item)}
                     className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-white border border-transparent hover:border-rose-100 transition-all cursor-pointer shadow-xs"
                     title="Delete Asset Item"
                   >
@@ -334,6 +412,7 @@ export default function MenuCatalog() {
       )}
 
       {/* CRUD Core Pop-up Form Dialog Overlay Box Canvas Framework Component */}
+      {/* CRUD Core Pop-up Form Dialog Overlay Box */}
       <Modal
         isOpen={isModalOpen}
         onClose={closeAndResetModal}
@@ -343,18 +422,20 @@ export default function MenuCatalog() {
           <button
             type="button"
             onClick={() => setFormMode("DISH")}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold ${formMode === "DISH" ? "bg-white shadow" : ""}`}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${formMode === "DISH" ? "bg-white shadow" : ""}`}
           >
             Add Dish
           </button>
           <button
             type="button"
             onClick={() => setFormMode("COMBO")}
-            className={`flex-1 py-2 rounded-lg text-xs font-bold ${formMode === "COMBO" ? "bg-white shadow" : ""}`}
+            className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${formMode === "COMBO" ? "bg-white shadow" : ""}`}
           >
             Add Combo
           </button>
         </div>
+
+        {/* COMBO SELECTION LIST */}
         {formMode === "COMBO" && (
           <div className="space-y-2 mb-4">
             <label className="block text-[11px] font-bold uppercase text-slate-500">
@@ -378,39 +459,75 @@ export default function MenuCatalog() {
                         );
                     }}
                   />
-                  {item.name} (₹{item.price})
+                  <span className="flex-1">{item.name}</span>
+                  <span className="text-xs font-bold text-slate-400">
+                    ₹{item.price}
+                  </span>
                 </label>
               ))}
             </div>
+
+            {/* Auto-calculated Price Display */}
+            <div className="flex justify-between items-center px-4 py-3 bg-rose-50 rounded-xl border border-rose-100">
+              <span className="text-[11px] font-black uppercase text-rose-600">
+                Combo Total Price
+              </span>
+              <span className="text-sm font-black text-rose-700">
+                ₹
+                {menuItems.items
+                  .filter((item) => selectedItems.includes(item._id))
+                  .reduce((sum, item) => sum + (Number(item.price) || 0), 0)}
+              </span>
+            </div>
           </div>
         )}
+
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <Input
-            label="Dish Item Title"
+            label="Title"
             required
-            placeholder="e.g., Spicy Paneer Tikka"
+            placeholder={
+              formMode === "DISH"
+                ? "e.g., Spicy Paneer Tikka"
+                : "e.g., Weekend Special Combo"
+            }
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-          <Input
-            label="Category Classification"
-            required
-            placeholder="e.g., Starters, Main Course, Desserts"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          />
+
+          {formMode === "DISH" && (
+            <Input
+              label="Category Classification"
+              required
+              placeholder="e.g., Starters, Main Course"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            />
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Dish ke liye manual, Combo ke liye price disable/read-only rakha hai */}
             <Input
-              label="Selling Price (INR)"
+              label={
+                formMode === "COMBO"
+                  ? "Calculated Price (INR)"
+                  : "Selling Price (INR)"
+              }
               type="number"
               required
+              readOnly={formMode === "COMBO"}
               placeholder="250"
-              value={price}
+              value={
+                formMode === "COMBO"
+                  ? menuItems.items
+                      .filter((i) => selectedItems.includes(i._id))
+                      .reduce((s, i) => s + (Number(i.price) || 0), 0)
+                  : price
+              }
               onChange={(e) => setPrice(e.target.value)}
             />
             <Input
-              label="Dish Image Web URL Link"
+              label="Image Web URL Link"
               type="url"
               placeholder="https://images.unsplash.com/..."
               value={image}
@@ -420,14 +537,14 @@ export default function MenuCatalog() {
 
           <div className="space-y-1">
             <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1">
-              Dish Description / Recipe Ingredients
+              Description
             </label>
             <textarea
               rows="3"
-              placeholder="Provide a clear culinary description or composition notes..."
+              placeholder="Culinary description..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all resize-none"
             />
           </div>
 
@@ -435,20 +552,15 @@ export default function MenuCatalog() {
             <button
               type="button"
               onClick={closeAndResetModal}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={upsertMutation.isLoading}
-              className="px-5 py-2.5 rounded-xl bg-rose-500 text-white font-bold text-xs hover:bg-rose-600 shadow-sm shadow-rose-500/10 disabled:opacity-50 cursor-pointer"
+              className="px-5 py-2.5 rounded-xl bg-rose-500 text-white font-bold text-xs hover:bg-rose-600"
             >
-              {upsertMutation.isLoading
-                ? "Saving Asset..."
-                : editingItem
-                  ? "Apply Modifications"
-                  : "Publish Item Live"}
+              Publish {formMode === "COMBO" ? "Combo" : "Dish"} Live
             </button>
           </div>
         </form>
