@@ -8,7 +8,8 @@ export default function Sidebar() {
     { to: '/menu', icon: <Utensils size={20} />, label: 'Menu Catalog' },
     { to: '/settings', icon: <Settings size={20} />, label: 'Settings' },
     { to: '/table-monitor', icon: <Clock size={20} />, label: 'Table Monitor' },
-    { to: '/analysis', icon: <Clock size={20}/>, label: 'Analysis'}
+    { to: '/analysis', icon: <Clock size={20}/>, label: 'Analysis'},
+    { to: '/offer', icon: <Clock size={20}/>, label: 'Offers'}
   ];
 
   return (

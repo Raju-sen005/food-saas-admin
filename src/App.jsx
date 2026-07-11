@@ -13,6 +13,7 @@ import { useAuth } from "./context/AuthContext";
 import TableMonitor from "./components/TableMonitor"; // Live Table Monitor
 import SuperAdminPanel from "./features/admin/SuperAdminPanel"; //
 import Analysis from "./features/analysis/Analysis";
+import Offers from "./features/offers/Offers";
 export default function App() {
   const { user, login } = useAuth();
   const [authView, setAuthView] = useState("LOGIN");
@@ -187,6 +188,7 @@ export default function App() {
               <Route path="/settings" element={<StoreSettings />} />
               <Route path="/table-monitor" element={<TableMonitor />} />
               <Route path="/analysis" element={<Analysis/>}/>
+              <Route path="/offer" element={<Offers/>}/>
               <Route path="/super-admin" element={<SuperAdminPanel />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

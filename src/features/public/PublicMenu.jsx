@@ -5,6 +5,7 @@ import axios from "axios";
 import {
   ShoppingBag,
   Star,
+  Tag,
   Plus,
   Minus,
   X,
@@ -59,6 +60,8 @@ export default function PublicMenu() {
       return res.data.data;
     },
   });
+  // Add this under the useQuery block
+  console.log("Catalog Data:", catalog);
 
   if (isLoading) {
     return (
@@ -126,6 +129,7 @@ export default function PublicMenu() {
     (acc, item) => acc + item.quantity,
     0,
   );
+  
   const totalCartAmount = Object.values(cart).reduce(
     (acc, item) => acc + item.price * item.quantity,
     0,
@@ -263,25 +267,25 @@ export default function PublicMenu() {
         </div>
 
         {/* Search Bar Component */}
-      <div className="px-4 pb-4 bg-white">
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search for your favorite dishes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-100 border border-slate-200 text-xs font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
-            >
-              <X size={14} />
-            </button>
-          )}
+        <div className="px-4 pb-4 bg-white">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search for your favorite dishes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-slate-100 border border-slate-200 text-xs font-medium py-3 px-4 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
         {/* Categories Tab Roller Component */}
         <div className="border-t border-slate-100 bg-white">
@@ -325,8 +329,39 @@ export default function PublicMenu() {
         </div>
       </div>
 
-      
-
+      {/* Offers Section - Updated */}
+      {catalog?.offers && catalog.offers.length > 0 && (
+  <div className="px-4 py-4">
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="font-black text-xs text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+        <span className="bg-rose-500 w-1.5 h-1.5 rounded-full"></span> 
+        Special Offers
+      </h3>
+    </div>
+    
+    <div className="flex gap-3 overflow-x-auto pb-2 -mr-4 pr-4 scrollbar-hide">
+      {catalog.offers.map((o) => (
+        <div
+          key={o._id}
+          className="min-w-[200px] bg-gradient-to-br from-slate-900 to-slate-800 p-4 rounded-2xl text-white shadow-md border border-slate-700"
+        >
+          <div className="flex justify-between items-start">
+            <div className="bg-white/10 w-8 h-8 rounded-lg flex items-center justify-center text-rose-400">
+              <Tag size={16} />
+            </div>
+            <span className="text-[10px] font-black bg-rose-500 px-2 py-0.5 rounded-full">
+              {o.discountValue}% OFF
+            </span>
+          </div>
+          <div className="mt-3">
+            <h4 className="font-black text-sm truncate">{o.title}</h4>
+            <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{o.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
       {/* Main Menu Grid / Items Core Containers */}
       <div className="p-4 space-y-6">
         {/* Combos Visual Blocks Layer */}
