@@ -1,7 +1,5 @@
 import { useAuth } from "../../context/AuthContext";
 import {
-  QrCode,
-  Link2,
   Download,
   Printer,
   Copy,
@@ -16,7 +14,7 @@ export default function StoreSettings() {
   const { user } = useAuth();
   const [copied, setCopied] = useState(null);
   const qrRefs = useRef({});
-  // 1. Load tables from localStorage or default to ["1"]
+
   const [tables, setTables] = useState(() => {
     const saved = localStorage.getItem(`tables_${user?.restaurantId}`);
     return saved ? JSON.parse(saved) : ["1"];
@@ -24,7 +22,6 @@ export default function StoreSettings() {
 
   const targetRestaurantId = user?.restaurantId || user?._id || "default-store";
 
-  // 2. DOWNLOAD FUNCTION
   const downloadQRCode = (tableNo) => {
     const canvas = qrRefs.current[tableNo];
     const pngUrl = canvas
@@ -44,7 +41,7 @@ export default function StoreSettings() {
     const windowContent = `
       <html>
         <head><title>Print Table ${tableNo} QR</title></head>
-        <body style="display:flex; flex-direction:column; align-items:center; justify-center:center; height:100vh;">
+        <body style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh;">
           <h1 style="font-family:sans-serif;">Scan to Order - Table ${tableNo}</h1>
           <img src="${dataUrl}" />
         </body>
@@ -57,7 +54,6 @@ export default function StoreSettings() {
     printWindow.print();
   };
 
-  // 2. Persist tables to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem(
       `tables_${user?.restaurantId}`,
@@ -88,39 +84,42 @@ export default function StoreSettings() {
   };
 
   return (
-    <div className="space-y-6 font-sans p-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 font-sans p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">
+          <h1 className="text-xl sm:text-2xl font-black text-slate-900">
             Store Settings & QR Engine
           </h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Manage table-specific QR codes
           </p>
         </div>
         <button
           onClick={addTable}
-          className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2"
+          className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white px-4 py-2.5 sm:py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 shrink-0"
         >
           <Plus size={16} /> Add Table
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Table Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {tables.map((tableNo) => {
           const url = generateTableUrl(tableNo);
           return (
             <div
               key={tableNo}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"
+              className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4"
             >
               <div className="flex justify-between items-center">
-                <span className="font-black text-slate-700">
+                <span className="font-black text-slate-700 text-sm sm:text-base">
                   Table {tableNo}
                 </span>
                 <button
                   onClick={() => removeTable(tableNo)}
-                  className="text-slate-400 hover:text-red-500"
+                  disabled={tables.length === 1}
+                  className="text-slate-400 hover:text-red-500 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
                 >
                   <Trash2 size={16} />
                 </button>
@@ -132,15 +131,16 @@ export default function StoreSettings() {
                   value={url}
                   size={150}
                   level={"H"}
+                  className="w-full max-w-[150px] h-auto"
                 />
               </div>
 
               <button
                 onClick={() => handleCopyLink(url, tableNo)}
-                className={`w-full py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
+                className={`w-full py-2.5 sm:py-2 rounded-lg text-xs font-bold flex items-center justify-center gap-2 border transition-all ${
                   copied === tableNo
                     ? "bg-emerald-50 text-emerald-600 border-emerald-200"
-                    : "bg-white text-slate-600 border-slate-200"
+                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                 }`}
               >
                 {copied === tableNo ? (
@@ -150,16 +150,17 @@ export default function StoreSettings() {
                 )}
                 {copied === tableNo ? "Copied!" : "Copy Link"}
               </button>
-              <div className="flex gap-2">
+
+              <div className="flex flex-col xs:flex-row sm:flex-row gap-2">
                 <button
                   onClick={() => downloadQRCode(tableNo)}
-                  className="flex-1 py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
+                  className="flex-1 py-2.5 sm:py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
                 >
                   <Download size={14} /> Download
                 </button>
                 <button
                   onClick={() => printQRCode(tableNo)}
-                  className="flex-1 py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
+                  className="flex-1 py-2.5 sm:py-2 text-xs font-bold border rounded-lg hover:bg-slate-100 flex items-center justify-center gap-1"
                 >
                   <Printer size={14} /> Print
                 </button>

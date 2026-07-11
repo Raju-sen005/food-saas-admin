@@ -165,7 +165,7 @@ export default function App() {
 
         {/* Dynamic Inner Layout Content Viewport */}
         <div className="flex-1 w-full lg:pl-64 flex flex-col min-h-screen">
-          <header className=" top-0 bg-white/80 backdrop-blur-md border-b border-slate-200/60 z-20 px-4 lg:px-8 h-16 flex items-center justify-between">
+          <header className="sticky top-0 bg-white backdrop-blur-md border-b border-slate-200/60 z-20 px-4 lg:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setIsMobileSidebarOpen(true)}
@@ -187,8 +187,8 @@ export default function App() {
               <Route path="/menu" element={<MenuCatalog />} />
               <Route path="/settings" element={<StoreSettings />} />
               <Route path="/table-monitor" element={<TableMonitor />} />
-              <Route path="/analysis" element={<Analysis/>}/>
-              <Route path="/offer" element={<Offers/>}/>
+              <Route path="/analysis" element={<Analysis />} />
+              <Route path="/offer" element={<Offers />} />
               <Route path="/super-admin" element={<SuperAdminPanel />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

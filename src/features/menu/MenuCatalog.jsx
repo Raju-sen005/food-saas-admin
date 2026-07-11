@@ -57,20 +57,22 @@ export default function MenuCatalog() {
     },
   });
   // Extract unique categories dynamically for food aggregator layout tabs
-  const categoriesList = [
-    "ALL",
-    ...new Set(
-      menuItems.items
-        .map((item) => item.category?.toUpperCase())
-        .filter(Boolean),
-    ),
-  ];
+  // Purane code ki jagah ye use karein
+const categoriesList = [
+  "ALL",
+  ...new Set(
+    (menuItems?.items || [])
+      .map((item) => item.category?.toUpperCase())
+      .filter(Boolean),
+  ),
+];
 
   // Combine items and combos
-  const allCatalogItems = [
-    ...menuItems.items,
-    ...menuItems.combos.map((c) => ({ ...c, isCombo: true })),
-  ];
+  // Purane code ki jagah ye use karein
+const allCatalogItems = [
+  ...(menuItems?.items || []),
+  ...(menuItems?.combos?.map((c) => ({ ...c, isCombo: true })) || []),
+];
 
   // Filter logic:
   const filteredMenuItems =
@@ -291,7 +293,7 @@ export default function MenuCatalog() {
       </div>
 
       {/* Dynamic Swiggy-Style Category Horizontal Navigation Roller */}
-      {menuItems.items.length > 0 && (
+      {menuItems?.items?.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none mask-image-right">
           {categoriesList.map((cat, idx) => (
             <button
@@ -442,7 +444,7 @@ export default function MenuCatalog() {
               Select Items for Combo
             </label>
             <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50">
-              {menuItems.items.map((item) => (
+              {menuItems?.items?.map((item) => (
                 <label
                   key={item._id}
                   className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer text-sm"
