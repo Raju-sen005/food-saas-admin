@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useMemo } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -9,25 +10,21 @@ import {
   QrCode,
 } from "lucide-react";
 
-export default function Sidebar({ closeMobileSidebar }) {
-  const navItems = [
-    { to: "/", icon: <LayoutDashboard size={20} />, label: "Overview" },
-    { to: "/orders", icon: <ShoppingBag size={20} />, label: "Live Orders" },
-    { to: "/menu", icon: <Utensils size={20} />, label: "Menu Catalog" },
-    {
-      to: "/table-monitor",
-      icon: <QrCode size={20} />,
-      label: "Table Monitor",
-    },
-    { to: "/analysis", icon: <BarChart3 size={20} />, label: "Analysis" },
-    { to: "/offer", icon: <Tag size={20} />, label: "Offers" },
-    { to: "/settings", icon: <Settings size={20} />, label: "Settings" },
-  ];
+const NAV_ITEMS = [
+  { to: "/", icon: LayoutDashboard, label: "Overview" },
+  { to: "/orders", icon: ShoppingBag, label: "Live Orders" },
+  { to: "/menu", icon: Utensils, label: "Menu Catalog" },
+  { to: "/table-monitor", icon: QrCode, label: "Table Monitor" },
+  { to: "/analysis", icon: BarChart3, label: "Analysis" },
+  { to: "/offer", icon: Tag, label: "Offers" },
+  { to: "/settings", icon: Settings, label: "Settings" },
+];
 
-  const handleNavClick = () => {
-    // Sirf mobile drawer mein yeh function pass hota hai, isliye safe optional call
-    if (closeMobileSidebar) closeMobileSidebar();
-  };
+export default function Sidebar({ closeMobileSidebar }) {
+  const handleNavClick = useMemo(
+    () => (closeMobileSidebar ? closeMobileSidebar : () => {}),
+    [closeMobileSidebar]
+  );
 
   return (
     <aside className="w-64 bg-slate-900 text-white h-full min-h-screen flex flex-col">
@@ -35,10 +32,10 @@ export default function Sidebar({ closeMobileSidebar }) {
         Chotu AI+ Admin
       </div>
       <nav className="flex-1 p-4 space-y-2">
-        {navItems.map((item) => (
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
           <NavLink
-            key={item.to}
-            to={item.to}
+            key={to}
+            to={to}
             onClick={handleNavClick}
             className={({ isActive }) =>
               `flex items-center gap-4 px-4 py-3 rounded-lg transition-all text-sm font-medium ${
@@ -48,8 +45,8 @@ export default function Sidebar({ closeMobileSidebar }) {
               }`
             }
           >
-            {item.icon}
-            {item.label}
+            <Icon size={20} />
+            {label}
           </NavLink>
         ))}
       </nav>

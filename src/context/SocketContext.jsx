@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
@@ -7,18 +7,21 @@ const SocketContext = createContext(null);
 export const SocketProvider = ({ children }) => {
   const [socket, setSocket] = useState(null);
   const { user } = useAuth();
+  const restaurantId = user?.restaurantId; // primitive value nikal liya
 
   useEffect(() => {
-    if (!user || !user.restaurantId) return;
+    if (!restaurantId) {
+      setSocket(null);
+      return;
+    }
 
     const socketInstance = io(`${import.meta.env.VITE_APP_API_BASE}`, {
       withCredentials: true,
-      transports: ['websocket']
+      transports: ['websocket'],
     });
 
     socketInstance.on('connect', () => {
-      // Secure multi-tenant workspace tracking channels binding call
-      socketInstance.emit('join_restaurant_room', user.restaurantId);
+      socketInstance.emit('join_restaurant_room', restaurantId);
     });
 
     setSocket(socketInstance);
@@ -26,10 +29,13 @@ export const SocketProvider = ({ children }) => {
     return () => {
       socketInstance.disconnect();
     };
-  }, [user]);
+    // 🔑 sirf restaurantId (primitive) pe depend, poore user object pe nahi
+  }, [restaurantId]);
+
+  const value = useMemo(() => socket, [socket]);
 
   return (
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={value}>
       {children}
     </SocketContext.Provider>
   );

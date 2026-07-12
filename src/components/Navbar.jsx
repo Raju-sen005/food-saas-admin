@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { LogOut, Building } from "lucide-react";
 import axios from "axios";
@@ -5,18 +6,17 @@ import axios from "axios";
 export default function Navbar() {
   const { user } = useAuth();
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     try {
       await axios.post("/auth/logout");
       window.location.reload();
-    } catch  {
+    } catch {
       console.error("Logout runtime error");
     }
-  };
+  }, []);
 
   return (
     <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
-      {/* Tenant Context — compact on mobile, full on desktop */}
       <div className="flex items-center gap-1.5 sm:gap-2 text-sm font-medium text-slate-600 min-w-0">
         <Building size={16} className="text-slate-400 shrink-0" />
         <span className="hidden sm:inline font-semibold text-slate-800 whitespace-nowrap">
@@ -28,7 +28,6 @@ export default function Navbar() {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-        {/* User info — hide name on very small screens, keep role badge */}
         <div className="hidden xs:flex sm:flex items-center gap-1.5 sm:gap-2 text-right">
           <p className="hidden sm:block text-sm font-semibold text-slate-800 truncate max-w-[120px]">
             {user?.name}

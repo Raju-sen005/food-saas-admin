@@ -1,17 +1,15 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { DollarSign, ShoppingBag, CheckCircle2, AlertTriangle, Activity, ShieldCheck, Radio } from 'lucide-react';
 
 export default function DashboardOverview() {
-  // Analytical layout calculations
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['dashboard-metrics'],
     queryFn: async () => {
-      // Axios call directly to our today-restricted backend route
       const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE}/orders/live`, { withCredentials: true });
       const todayOrders = res.data.data || [];
-      
-      // Calculate revenue from today's orders (Excluding REJECTED orders for clear accounting)
+
       const revenue = todayOrders
         .filter(o => o.status !== 'REJECTED')
         .reduce((acc, curr) => acc + (curr.total || 0), 0);
@@ -22,8 +20,39 @@ export default function DashboardOverview() {
         pending: todayOrders.filter(o => o.status === 'PENDING').length,
         accepted: todayOrders.filter(o => o.status === 'ACCEPTED').length,
       };
-    }
+    },
+    staleTime: 30_000,        // 30 sec tak "fresh" maana jayega, refetch nahi hoga baar baar
+    refetchOnWindowFocus: false, // tab switch karke wapas aane pe refetch spam nahi
+    refetchInterval: 60_000,  // background poll every 1 min — dashboard ke liye kaafi
   });
+
+  // stats array sirf tab recompute hoga jab metrics change ho, har render pe nahi
+  const stats = useMemo(() => [
+    {
+      title: "Today's Revenue",
+      value: `₹${metrics?.revenue?.toLocaleString('en-IN') || 0}`,
+      icon: <DollarSign size={20} className="text-emerald-600" />,
+      bg: "bg-emerald-50 border-emerald-100/60"
+    },
+    {
+      title: "Today's Total Orders",
+      value: metrics?.totalOrdersToday || 0,
+      icon: <ShoppingBag size={20} className="text-rose-600" />,
+      bg: "bg-rose-50 border-rose-100/60"
+    },
+    {
+      title: "Preparing in Kitchen",
+      value: metrics?.accepted || 0,
+      icon: <CheckCircle2 size={20} className="text-amber-600" />,
+      bg: "bg-amber-50 border-amber-100/60"
+    },
+    {
+      title: "New/Unattended",
+      value: metrics?.pending || 0,
+      icon: <AlertTriangle size={20} className="text-indigo-600" />,
+      bg: "bg-indigo-50 border-indigo-100/60"
+    },
+  ], [metrics]);
 
   if (isLoading) {
     return (
@@ -34,36 +63,8 @@ export default function DashboardOverview() {
     );
   }
 
-  const stats = [
-    { 
-      title: "Today's Revenue", 
-      value: `₹${metrics?.revenue?.toLocaleString('en-IN') || 0}`, 
-      icon: <DollarSign size={20} className="text-emerald-600" />, 
-      bg: "bg-emerald-50 border-emerald-100/60" 
-    },
-    { 
-      title: "Today's Total Orders", 
-      value: metrics?.totalOrdersToday || 0, 
-      icon: <ShoppingBag size={20} className="text-rose-600" />, 
-      bg: "bg-rose-50 border-rose-100/60" 
-    },
-    { 
-      title: "Preparing in Kitchen", 
-      value: metrics?.accepted || 0, 
-      icon: <CheckCircle2 size={20} className="text-amber-600" />, 
-      bg: "bg-amber-50 border-amber-100/60" 
-    },
-    { 
-      title: "New/Unattended", 
-      value: metrics?.pending || 0, 
-      icon: <AlertTriangle size={20} className="text-indigo-600" />, 
-      bg: "bg-indigo-50 border-indigo-100/60" 
-    },
-  ];
-
   return (
     <div className="space-y-8 font-sans">
-      {/* Top Welcome Title Banner */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-xs">
         <div>
           <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Operational Insights</h1>
@@ -75,11 +76,10 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* Grid Matrix Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {stats.map((stat, idx) => (
-          <div 
-            key={idx} 
+          <div
+            key={idx}
             className="bg-white p-6 rounded-2xl border border-slate-200/60 shadow-xs flex items-center justify-between hover:shadow-md transition-all duration-200 group cursor-pointer"
           >
             <div className="space-y-1">
@@ -93,7 +93,6 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* System Integrity Integration Card Section */}
       <div className="bg-white rounded-2xl border border-slate-200/60 shadow-xs overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex items-center gap-3 bg-slate-50/50">
           <div className="p-2 bg-slate-900 text-white rounded-xl shadow-xs">
@@ -104,7 +103,7 @@ export default function DashboardOverview() {
             <p className="text-[11px] md:text-xs text-slate-400 font-medium">Telemetry sync heartbeats loop diagnostic metrics</p>
           </div>
         </div>
-        
+
         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="flex items-center justify-between p-4 bg-slate-50/60 border border-slate-100 rounded-xl">
             <div className="flex items-center gap-2.5">

@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
 const AuthContext = createContext(null);
@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
       try {
         const res = await axios.get("/auth/me");
         if (res.data.success) setUser(res.data.data);
-      } catch  {
+      } catch {
         setUser(null);
       } finally {
         setLoading(false);
@@ -25,21 +25,35 @@ export const AuthProvider = ({ children }) => {
     verifySession();
   }, []);
 
-  const login = async (email, password) => {
+  // useCallback: function reference stable rehti h, consumers unnecessarily re-render nahi hote
+  const login = useCallback(async (email, password) => {
     const res = await axios.post("/auth/login", { email, password });
     if (res.data.success) setUser(res.data.data);
     return res.data;
-  };
+  }, []);
 
-  // --- NEW: TENANT SIGNUP BINDER ---
-  const registerTenant = async (formData) => {
+  const registerTenant = useCallback(async (formData) => {
     const res = await axios.post("/auth/register", formData);
     if (res.data.success) setUser(res.data.data.user);
-    return res.data; // Isme restaurant details aur unique slug return hoga
-  };
+    return res.data;
+  }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await axios.post("/auth/logout");
+    } finally {
+      setUser(null);
+    }
+  }, []);
+
+  // useMemo: value object sirf tab naya banega jab user/loading actually change ho
+  const value = useMemo(
+    () => ({ user, login, registerTenant, logout, loading }),
+    [user, loading, login, registerTenant, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, login, registerTenant, loading }}>
+    <AuthContext.Provider value={value}>
       {!loading && children}
     </AuthContext.Provider>
   );

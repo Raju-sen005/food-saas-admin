@@ -1,20 +1,47 @@
-import { useState } from "react";
+import { useState, useCallback, useMemo, memo } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import {
-  ShoppingBag,
-  Star,
-  Tag,
-  Plus,
-  Minus,
-  X,
-  CheckCircle2,
-  Utensils,
-  AlertCircle,
-  User,
-  Phone,
+  ShoppingBag, Star, Tag, Plus, Minus, X,
+  CheckCircle2, Utensils, AlertCircle, User, Phone,
 } from "lucide-react";
+
+// 🔑 Component ko file-level pe nikala — ab har render pe naya identity nahi banega
+const QuantityController = memo(function QuantityController({ id, name, price, type, quantity, onAdd, onRemove }) {
+  if (quantity === 0) {
+    return (
+      <button
+        type="button"
+        onClick={() => onAdd(id, name, price, type)}
+        className="bg-white hover:bg-slate-50 text-emerald-600 font-black text-xs px-5 py-2 rounded-xl shadow-xs border border-slate-200/80 active:scale-95 transition-all cursor-pointer tracking-wider"
+      >
+        ADD
+      </button>
+    );
+  }
+  return (
+    <div className="flex items-center bg-emerald-600 text-white rounded-xl overflow-hidden shadow-sm h-[32px]">
+      <button
+        type="button"
+        onClick={() => onRemove(id)}
+        className="px-2.5 hover:bg-emerald-700 h-full flex items-center justify-center cursor-pointer"
+      >
+        <Minus size={11} strokeWidth={3} />
+      </button>
+      <span className="px-1.5 text-xs font-black min-w-[16px] text-center select-none">
+        {quantity}
+      </span>
+      <button
+        type="button"
+        onClick={() => onAdd(id, name, price, type)}
+        className="px-2.5 hover:bg-emerald-700 h-full flex items-center justify-center cursor-pointer"
+      >
+        <Plus size={11} strokeWidth={3} />
+      </button>
+    </div>
+  );
+});
 
 export default function PublicMenu() {
   const { restaurantId } = useParams();
@@ -30,26 +57,20 @@ export default function PublicMenu() {
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [isSubmitting, setIsSubmitting] = useState(false);
-
   const [touched, setTouched] = useState({ name: false, phone: false });
 
   const isValidName = /^[A-Za-z ]{3,50}$/.test(customerName.trim());
   const isValidPhone = /^[6-9]\d{9}$/.test(customerPhone.trim());
-  const isValidAddress =
-    orderType !== "DELIVERY" || deliveryAddress.trim().length > 4;
+  const isValidAddress = orderType !== "DELIVERY" || deliveryAddress.trim().length > 4;
 
-  function totalItemsCountSafe(c) {
-    return Object.values(c).reduce((acc, item) => acc + item.quantity, 0) > 0;
-  }
+  const totalItemsInCart = useMemo(
+    () => Object.values(cart).reduce((acc, item) => acc + item.quantity, 0),
+    [cart]
+  );
 
-  const isFormValid =
-    isValidName && isValidPhone && isValidAddress && totalItemsCountSafe(cart);
+  const isFormValid = isValidName && isValidPhone && isValidAddress && totalItemsInCart > 0;
 
-  const {
-    data: catalog,
-    isLoading,
-    error,
-  } = useQuery({
+  const { data: catalog, isLoading, error } = useQuery({
     queryKey: ["public-catalog", restaurantId],
     queryFn: async () => {
       const res = await axios.get(
@@ -57,55 +78,25 @@ export default function PublicMenu() {
       );
       return res.data.data;
     },
+    staleTime: 5 * 60_000, // menu 5 min tak fresh maano — baar baar refetch nahi
+    enabled: !!restaurantId,
   });
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 space-y-3">
-        <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-          Loading Digital Menu...
-        </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
-        <div className="p-4 bg-rose-50 text-rose-500 rounded-full mb-3">
-          <X size={28} />
-        </div>
-        <h3 className="font-black text-slate-800 text-base">
-          Menu Not Available
-        </h3>
-        <p className="text-xs text-slate-400 font-medium max-w-xs mt-1">
-          Invalid QR code configurations or server node aggregation failed.
-        </p>
-      </div>
-    );
-  }
-
   const { categories, combos, restaurant } = catalog || {};
-  const categoryNames = categories ? Object.keys(categories) : [];
+  const categoryNames = useMemo(() => (categories ? Object.keys(categories) : []), [categories]);
 
-  const addToCart = (id, name, price, type = "item") => {
+  // 🔑 useCallback — stable refs, taaki QuantityController ka memo() kaam kare
+  const addToCart = useCallback((id, name, price, type = "item") => {
     setCart((prevCart) => {
       const existing = prevCart[id];
       if (existing) {
-        return {
-          ...prevCart,
-          [id]: { ...existing, quantity: existing.quantity + 1 },
-        };
+        return { ...prevCart, [id]: { ...existing, quantity: existing.quantity + 1 } };
       }
-      return {
-        ...prevCart,
-        [id]: { name, price: Number(price), quantity: 1, type },
-      };
+      return { ...prevCart, [id]: { name, price: Number(price), quantity: 1, type } };
     });
-  };
+  }, []);
 
-  const removeFromCart = (id) => {
+  const removeFromCart = useCallback((id) => {
     setCart((prevCart) => {
       const existing = prevCart[id];
       if (!existing) return prevCart;
@@ -114,39 +105,37 @@ export default function PublicMenu() {
         delete newCart[id];
         return newCart;
       }
-      return {
-        ...prevCart,
-        [id]: { ...existing, quantity: existing.quantity - 1 },
-      };
+      return { ...prevCart, [id]: { ...existing, quantity: existing.quantity - 1 } };
     });
-  };
+  }, []);
 
-  const totalItemsCount = Object.values(cart).reduce(
-    (acc, item) => acc + item.quantity,
-    0,
+  const totalCartAmount = useMemo(
+    () => Object.values(cart).reduce((acc, item) => acc + item.price * item.quantity, 0),
+    [cart]
   );
 
-  const totalCartAmount = Object.values(cart).reduce(
-    (acc, item) => acc + item.price * item.quantity,
-    0,
+  // 🔑 Filtering ab sirf tab recompute hoga jab combos/categories/searchQuery change ho
+  const filteredCombos = useMemo(
+    () => combos?.filter((c) => c.name.toLowerCase().includes(searchQuery.toLowerCase())) || [],
+    [combos, searchQuery]
   );
 
-  const filteredCombos = combos?.filter((c) =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const filteredCategoryItems = useMemo(() => {
+    if (!categories) return {};
+    const result = {};
+    for (const catName of Object.keys(categories)) {
+      result[catName] = categories[catName].filter((i) =>
+        i.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    return result;
+  }, [categories, searchQuery]);
 
-  const getFilteredItems = (items) =>
-    items?.filter((i) =>
-      i.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
-
-  const handleFinalOrderSubmit = async (e) => {
+  const handleFinalOrderSubmit = useCallback(async (e) => {
     e.preventDefault();
     setTouched({ name: true, phone: true });
 
-    if (!isValidName || !isValidPhone || !isValidAddress) {
-      return;
-    }
+    if (!isValidName || !isValidPhone || !isValidAddress) return;
 
     const orderPayload = {
       restaurantId,
@@ -169,14 +158,9 @@ export default function PublicMenu() {
 
     try {
       setIsSubmitting(true);
-      const res = await axios.post(
-        `${import.meta.env.VITE_APP_API_BASE}/orders/place`,
-        orderPayload,
-      );
+      const res = await axios.post(`${import.meta.env.VITE_APP_API_BASE}/orders/place`, orderPayload);
       if (res.data.success) {
-        alert(
-          `🎉 Order Confirmed Successfully!\n\nOrder ID: ${res.data.order.orderId}`,
-        );
+        alert(`🎉 Order Confirmed Successfully!\n\nOrder ID: ${res.data.order.orderId}`);
         setCart({});
         setCustomerName("");
         setCustomerPhone("");
@@ -185,59 +169,41 @@ export default function PublicMenu() {
         setIsCartOpen(false);
       }
     } catch (err) {
-      alert(
-        err.response?.data?.message ||
-          "Internal validation check mismatch error.",
-      );
+      alert(err.response?.data?.message || "Internal validation check mismatch error.");
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [restaurantId, tableToken, customerName, customerPhone, orderType, deliveryAddress, cart, totalCartAmount, isValidName, isValidPhone, isValidAddress]);
 
-  const QuantityController = ({ id, name, price, type }) => {
-    const qty = cart[id]?.quantity || 0;
-    if (qty === 0) {
-      return (
-        <button
-          type="button"
-          onClick={() => addToCart(id, name, price, type)}
-          className="bg-white hover:bg-slate-50 text-emerald-600 font-black text-xs px-5 py-2 rounded-xl shadow-xs border border-slate-200/80 active:scale-95 transition-all cursor-pointer tracking-wider"
-        >
-          ADD
-        </button>
-      );
-    }
+  if (isLoading) {
     return (
-      <div className="flex items-center bg-emerald-600 text-white rounded-xl overflow-hidden shadow-sm h-[32px]">
-        <button
-          type="button"
-          onClick={() => removeFromCart(id)}
-          className="px-2.5 hover:bg-emerald-700 h-full flex items-center justify-center cursor-pointer"
-        >
-          <Minus size={11} strokeWidth={3} />
-        </button>
-        <span className="px-1.5 text-xs font-black min-w-[16px] text-center select-none">
-          {qty}
-        </span>
-        <button
-          type="button"
-          onClick={() => addToCart(id, name, price, type)}
-          className="px-2.5 hover:bg-emerald-700 h-full flex items-center justify-center cursor-pointer"
-        >
-          <Plus size={11} strokeWidth={3} />
-        </button>
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 space-y-3">
+        <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+        <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Loading Digital Menu...</p>
       </div>
     );
-  };
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center">
+        <div className="p-4 bg-rose-50 text-rose-500 rounded-full mb-3">
+          <X size={28} />
+        </div>
+        <h3 className="font-black text-slate-800 text-base">Menu Not Available</h3>
+        <p className="text-xs text-slate-400 font-medium max-w-xs mt-1">
+          Invalid QR code configurations or server node aggregation failed.
+        </p>
+      </div>
+    );
+  }
 
   const nameHasError = touched.name && !isValidName;
   const phoneHasError = touched.phone && !isValidPhone;
 
   return (
     <div className="min-h-screen bg-slate-100 sm:bg-slate-200/50">
-      {/* Outer wrapper scales width across breakpoints; on larger screens it centers like a "digital menu card" */}
       <div className="min-h-screen bg-slate-50 text-slate-900 pb-28 antialiased font-sans max-w-md sm:max-w-2xl lg:max-w-5xl mx-auto shadow-sm relative sm:border-x border-slate-200/40">
-        {/* Header */}
         <div className="bg-white sticky top-0 z-40 border-b border-slate-100 shadow-xs">
           <div className="p-4 sm:p-6 flex gap-4 items-center">
             {restaurant?.logo ? (
@@ -263,7 +229,6 @@ export default function PublicMenu() {
             </div>
           </div>
 
-          {/* Search Bar */}
           <div className="px-4 sm:px-6 pb-4 bg-white">
             <div className="relative sm:max-w-md">
               <input
@@ -284,7 +249,6 @@ export default function PublicMenu() {
             </div>
           </div>
 
-          {/* Categories */}
           <div className="border-t border-slate-100 bg-white">
             <div className="px-4 sm:px-6 py-2.5 flex gap-1.5 overflow-x-auto no-scrollbar">
               <button
@@ -326,8 +290,7 @@ export default function PublicMenu() {
           </div>
         </div>
 
-        {/* Offers */}
-        {catalog?.offers && catalog.offers.length > 0 && (
+        {catalog?.offers?.length > 0 && (
           <div className="px-4 sm:px-6 py-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-black text-xs text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
@@ -335,7 +298,6 @@ export default function PublicMenu() {
                 Special Offers
               </h3>
             </div>
-
             <div className="flex gap-3 overflow-x-auto pb-2 -mr-4 pr-4 sm:mr-0 sm:pr-0 scrollbar-hide">
               {catalog.offers.map((o) => (
                 <div
@@ -352,9 +314,7 @@ export default function PublicMenu() {
                   </div>
                   <div className="mt-3">
                     <h4 className="font-black text-sm truncate">{o.title}</h4>
-                    <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">
-                      {o.description}
-                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 line-clamp-1">{o.description}</p>
                   </div>
                 </div>
               ))}
@@ -362,59 +322,49 @@ export default function PublicMenu() {
           </div>
         )}
 
-        {/* Main Menu Grid */}
         <div className="p-4 sm:p-6 space-y-6">
-          {/* Combos */}
-          {combos?.length > 0 &&
-            (activeCategory === "ALL" || activeCategory === "COMBOS") && (
-              <div className="space-y-3">
-                <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-1">
-                  ✨ Best Value Combos
-                </h2>
-
-                <div className="flex gap-3 overflow-x-auto pb-2 -mr-4 pr-4 sm:mr-0 sm:pr-0 no-scrollbar">
-                  {filteredCombos.map((combo) => (
-                    <div
-                      key={combo._id}
-                      className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex flex-col justify-between gap-3 shrink-0 w-[240px]"
-                    >
-                      <div className="space-y-1">
-                        <h3 className="font-black text-sm text-slate-900 tracking-tight truncate">
-                          {combo.name}
-                        </h3>
-                        <p className="text-[11px] text-slate-400 font-medium line-clamp-2 leading-relaxed h-[28px]">
-                          {combo.description}
-                        </p>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-2">
-                        <p className="text-sm font-black text-slate-900">
-                          ₹{combo.price}
-                        </p>
-                        <QuantityController
-                          id={combo._id}
-                          name={combo.name}
-                          price={combo.price}
-                          type="combo"
-                        />
-                      </div>
+          {combos?.length > 0 && (activeCategory === "ALL" || activeCategory === "COMBOS") && (
+            <div className="space-y-3">
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-1">
+                ✨ Best Value Combos
+              </h2>
+              <div className="flex gap-3 overflow-x-auto pb-2 -mr-4 pr-4 sm:mr-0 sm:pr-0 no-scrollbar">
+                {filteredCombos.map((combo) => (
+                  <div
+                    key={combo._id}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex flex-col justify-between gap-3 shrink-0 w-[240px]"
+                  >
+                    <div className="space-y-1">
+                      <h3 className="font-black text-sm text-slate-900 tracking-tight truncate">{combo.name}</h3>
+                      <p className="text-[11px] text-slate-400 font-medium line-clamp-2 leading-relaxed h-[28px]">
+                        {combo.description}
+                      </p>
                     </div>
-                  ))}
-                </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-sm font-black text-slate-900">₹{combo.price}</p>
+                      <QuantityController
+                        id={combo._id}
+                        name={combo.name}
+                        price={combo.price}
+                        type="combo"
+                        quantity={cart[combo._id]?.quantity || 0}
+                        onAdd={addToCart}
+                        onRemove={removeFromCart}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
+          )}
 
-          {/* Categories — grid on larger screens */}
           {categories &&
             Object.keys(categories)
-              .filter(
-                (catName) =>
-                  activeCategory === "ALL" || activeCategory === catName,
-              )
+              .filter((catName) => activeCategory === "ALL" || activeCategory === catName)
               .map((categoryName) => (
                 <div key={categoryName} className="space-y-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {getFilteredItems(categories[categoryName]).map((item) => (
+                    {filteredCategoryItems[categoryName]?.map((item) => (
                       <div
                         key={item._id}
                         className="bg-white p-4 rounded-2xl border border-slate-200/60 shadow-xs flex gap-4 items-center justify-between"
@@ -429,15 +379,11 @@ export default function PublicMenu() {
                           )}
                           <div className="space-y-0.5 min-w-0">
                             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block border border-white shadow-xs" />
-                            <h3 className="font-black text-sm text-slate-900 tracking-tight truncate">
-                              {item.name}
-                            </h3>
+                            <h3 className="font-black text-sm text-slate-900 tracking-tight truncate">{item.name}</h3>
                             <p className="text-xs text-slate-400 font-medium line-clamp-2 leading-relaxed pr-2">
                               {item.description}
                             </p>
-                            <p className="text-sm font-black text-slate-900 pt-0.5">
-                              ₹{item.price}
-                            </p>
+                            <p className="text-sm font-black text-slate-900 pt-0.5">₹{item.price}</p>
                           </div>
                         </div>
                         <div className="shrink-0">
@@ -446,6 +392,9 @@ export default function PublicMenu() {
                             name={item.name}
                             price={item.price}
                             type="item"
+                            quantity={cart[item._id]?.quantity || 0}
+                            onAdd={addToCart}
+                            onRemove={removeFromCart}
                           />
                         </div>
                       </div>
@@ -455,8 +404,7 @@ export default function PublicMenu() {
               ))}
         </div>
 
-        {/* Floating Bottom Bar */}
-        {totalItemsCount > 0 && !isCartOpen && (
+        {totalItemsInCart > 0 && !isCartOpen && (
           <div className="fixed bottom-4 inset-x-4 max-w-sm sm:max-w-md mx-auto z-40 px-2 lg:left-1/2 lg:-translate-x-1/2 lg:right-auto">
             <div className="bg-slate-950 text-white p-3.5 rounded-2xl shadow-xl flex justify-between items-center border border-slate-800 backdrop-blur-md">
               <div className="flex items-center gap-3 pl-1">
@@ -465,7 +413,7 @@ export default function PublicMenu() {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                    {totalItemsCount} Item{totalItemsCount > 1 ? "s" : ""}
+                    {totalItemsInCart} Item{totalItemsInCart > 1 ? "s" : ""}
                   </p>
                   <p className="text-base font-black text-white tracking-tight">
                     ₹{totalCartAmount.toLocaleString("en-IN")}
@@ -482,14 +430,11 @@ export default function PublicMenu() {
           </div>
         )}
 
-        {/* Cart Drawer — bottom sheet on mobile, centered modal on desktop */}
         {isCartOpen && (
           <div className="fixed inset-0 bg-slate-950/60 z-50 flex items-end sm:items-center justify-center backdrop-blur-xs p-0 sm:p-4">
             <div className="bg-white w-full max-w-md sm:rounded-3xl rounded-t-3xl max-h-[85vh] sm:max-h-[90vh] overflow-y-auto shadow-2xl flex flex-col">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center sticky top-0 bg-white z-10">
-                <h2 className="text-base font-black text-slate-900 tracking-tight">
-                  Review Order
-                </h2>
+                <h2 className="text-base font-black text-slate-900 tracking-tight">Review Order</h2>
                 <button
                   onClick={() => setIsCartOpen(false)}
                   className="p-2 hover:bg-slate-50 rounded-xl text-slate-400 cursor-pointer"
@@ -498,11 +443,7 @@ export default function PublicMenu() {
                 </button>
               </div>
 
-              <form
-                onSubmit={handleFinalOrderSubmit}
-                className="p-4 space-y-5 flex-1 text-slate-700"
-                noValidate
-              >
+              <form onSubmit={handleFinalOrderSubmit} className="p-4 space-y-5 flex-1 text-slate-700" noValidate>
                 <div className="space-y-2">
                   <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">
                     Fulfillment Preference
@@ -529,11 +470,7 @@ export default function PublicMenu() {
                           size={14}
                           strokeWidth={2.5}
                           className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${
-                            nameHasError
-                              ? "text-rose-400"
-                              : isValidName
-                                ? "text-emerald-500"
-                                : "text-slate-300"
+                            nameHasError ? "text-rose-400" : isValidName ? "text-emerald-500" : "text-slate-300"
                           }`}
                         />
                         <input
@@ -542,9 +479,7 @@ export default function PublicMenu() {
                           placeholder="Full Name"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
-                          onBlur={() =>
-                            setTouched((t) => ({ ...t, name: true }))
-                          }
+                          onBlur={() => setTouched((t) => ({ ...t, name: true }))}
                           className={`w-full pl-10 pr-9 py-3 text-xs rounded-xl border bg-slate-50/50 focus:outline-none focus:ring-4 transition-colors ${
                             nameHasError
                               ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
@@ -554,10 +489,7 @@ export default function PublicMenu() {
                           }`}
                         />
                         {isValidName && (
-                          <CheckCircle2
-                            size={14}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100"
-                          />
+                          <CheckCircle2 size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100" />
                         )}
                       </div>
                       {nameHasError && (
@@ -574,11 +506,7 @@ export default function PublicMenu() {
                           size={14}
                           strokeWidth={2.5}
                           className={`absolute left-3.5 top-1/2 -translate-y-1/2 ${
-                            phoneHasError
-                              ? "text-rose-400"
-                              : isValidPhone
-                                ? "text-emerald-500"
-                                : "text-slate-300"
+                            phoneHasError ? "text-rose-400" : isValidPhone ? "text-emerald-500" : "text-slate-300"
                           }`}
                         />
                         <input
@@ -588,14 +516,8 @@ export default function PublicMenu() {
                           maxLength={10}
                           placeholder="Active Phone Number"
                           value={customerPhone}
-                          onChange={(e) =>
-                            setCustomerPhone(
-                              e.target.value.replace(/\D/g, "").slice(0, 10),
-                            )
-                          }
-                          onBlur={() =>
-                            setTouched((t) => ({ ...t, phone: true }))
-                          }
+                          onChange={(e) => setCustomerPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                          onBlur={() => setTouched((t) => ({ ...t, phone: true }))}
                           className={`w-full pl-10 pr-9 py-3 text-xs rounded-xl border bg-slate-50/50 focus:outline-none focus:ring-4 transition-colors ${
                             phoneHasError
                               ? "border-rose-400 focus:border-rose-500 focus:ring-rose-500/10"
@@ -605,10 +527,7 @@ export default function PublicMenu() {
                           }`}
                         />
                         {isValidPhone && (
-                          <CheckCircle2
-                            size={14}
-                            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100"
-                          />
+                          <CheckCircle2 size={14} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-emerald-500 fill-emerald-100" />
                         )}
                       </div>
                       {phoneHasError && (
@@ -638,21 +557,12 @@ export default function PublicMenu() {
                   </span>
                   <div className="bg-slate-50/80 rounded-xl p-3 divide-y divide-slate-100 text-xs border border-slate-100 max-h-36 overflow-y-auto">
                     {Object.entries(cart).map(([id, details]) => (
-                      <div
-                        key={id}
-                        className="py-2.5 flex justify-between items-center text-slate-700 font-medium"
-                      >
+                      <div key={id} className="py-2.5 flex justify-between items-center text-slate-700 font-medium">
                         <span>
-                          {details.name}{" "}
-                          <b className="text-emerald-600 ml-1">
-                            x{details.quantity}
-                          </b>
+                          {details.name} <b className="text-emerald-600 ml-1">x{details.quantity}</b>
                         </span>
                         <span className="font-black text-slate-900">
-                          ₹
-                          {(details.price * details.quantity).toLocaleString(
-                            "en-IN",
-                          )}
+                          ₹{(details.price * details.quantity).toLocaleString("en-IN")}
                         </span>
                       </div>
                     ))}
@@ -668,15 +578,8 @@ export default function PublicMenu() {
                       onClick={() => setPaymentMethod("UPI")}
                       className={`p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between ${paymentMethod === "UPI" ? "border-emerald-500 bg-emerald-50/30" : "border-slate-200 bg-white"}`}
                     >
-                      <span className="text-xs font-bold text-slate-800">
-                        Instant UPI App
-                      </span>
-                      {paymentMethod === "UPI" && (
-                        <CheckCircle2
-                          size={14}
-                          className="text-emerald-600 fill-emerald-100"
-                        />
-                      )}
+                      <span className="text-xs font-bold text-slate-800">Instant UPI App</span>
+                      {paymentMethod === "UPI" && <CheckCircle2 size={14} className="text-emerald-600 fill-emerald-100" />}
                     </div>
                     <div
                       onClick={() => setPaymentMethod("CASH")}
@@ -685,12 +588,7 @@ export default function PublicMenu() {
                       <span className="text-xs font-bold text-slate-800">
                         {orderType === "DELIVERY" ? "COD Pay" : "Pay at Desk"}
                       </span>
-                      {paymentMethod === "CASH" && (
-                        <CheckCircle2
-                          size={14}
-                          className="text-emerald-600 fill-emerald-100"
-                        />
-                      )}
+                      {paymentMethod === "CASH" && <CheckCircle2 size={14} className="text-emerald-600 fill-emerald-100" />}
                     </div>
                   </div>
                 </div>
@@ -705,9 +603,7 @@ export default function PublicMenu() {
                         : "bg-gradient-to-r from-emerald-500 to-teal-600 text-white cursor-pointer shadow-emerald-600/10 active:scale-[0.99]"
                     }`}
                   >
-                    {isSubmitting
-                      ? "Placing Order..."
-                      : `Confirm Order • ₹${totalCartAmount.toLocaleString("en-IN")}`}
+                    {isSubmitting ? "Placing Order..." : `Confirm Order • ₹${totalCartAmount.toLocaleString("en-IN")}`}
                   </button>
                   {!isFormValid && (
                     <p className="text-center text-[10px] font-bold text-slate-400 mt-2">

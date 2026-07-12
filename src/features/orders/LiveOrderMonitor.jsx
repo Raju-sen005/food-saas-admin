@@ -1,11 +1,65 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, memo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useSocket } from "../../context/SocketContext";
 import { useNotificationSound } from "../../hooks/useNotificationSound";
-import { Eye } from "lucide-react";
+import { Eye, Check, X } from "lucide-react";
 import OrderDetailsModal from "../../components/OrderDetailsModal";
-import { Check, X } from "lucide-react";
+
+// 🔑 Row extracted + memoized: sirf tab re-render hogi jab uske apne props change ho,
+// poori table re-render nahi hogi kisi ek row ke status change ya page switch pe
+const OrderRow = memo(function OrderRow({ order, onStatusChange, onView }) {
+  return (
+    <tr className="hover:bg-slate-50 transition-colors">
+      <td className="p-3 sm:p-4 font-mono font-bold text-rose-600 text-xs sm:text-sm whitespace-nowrap">
+        {order.orderId}
+      </td>
+      <td className="p-3 sm:p-4 font-bold text-slate-700 text-xs sm:text-sm whitespace-nowrap">
+        {order.tableNumber}
+      </td>
+      <td className="p-3 sm:p-4 text-xs sm:text-sm font-semibold whitespace-nowrap">
+        {order.customerName}
+      </td>
+      <td className="p-3 sm:p-4 text-xs text-slate-500 max-w-[160px] truncate">
+        {order.items.slice(0, 2).map((i) => i.name).join(", ")}
+        {order.items.length > 2 && "..."}
+      </td>
+      <td className="p-3 sm:p-4 text-right font-black text-xs sm:text-sm whitespace-nowrap">
+        ₹{order.total}
+      </td>
+      <td className="p-3 sm:p-4">
+        <div className="flex justify-center gap-1.5 sm:gap-2">
+          {order.status === "PENDING" ? (
+            <>
+              <button
+                onClick={() => onStatusChange(order._id, "ACCEPTED")}
+                className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200"
+              >
+                <Check size={16} />
+              </button>
+              <button
+                onClick={() => onStatusChange(order._id, "REJECTED")}
+                className="p-1.5 sm:p-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200"
+              >
+                <X size={16} />
+              </button>
+            </>
+          ) : (
+            <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 flex items-center whitespace-nowrap">
+              {order.status}
+            </span>
+          )}
+          <button
+            onClick={() => onView(order)}
+            className="p-1.5 sm:p-2 border border-slate-200 rounded-lg hover:bg-slate-100"
+          >
+            <Eye size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 export default function LiveOrderMonitor() {
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -21,6 +75,8 @@ export default function LiveOrderMonitor() {
       });
       return res.data.data || [];
     },
+    staleTime: 15_000,
+    refetchOnWindowFocus: false,
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,16 +96,15 @@ export default function LiveOrderMonitor() {
         newOrder,
         ...(oldOrders || []),
       ]);
+      setCurrentPage(1); // naya order aane pe pehle page pe le jao, warna user ko dikhega hi nahi
     };
 
     socket.on("NEW_ORDER_RECEIVED", handleNewOrder);
-
-    return () => {
-      socket.off("NEW_ORDER_RECEIVED", handleNewOrder);
-    };
+    return () => socket.off("NEW_ORDER_RECEIVED", handleNewOrder);
   }, [socket, queryClient, playAlert]);
 
-  const handleStatusTransition = async (orderId, targetStatus) => {
+  // useCallback: function reference stable — OrderRow ka memo() effective rehta h
+  const handleStatusTransition = useCallback(async (orderId, targetStatus) => {
     let rejectReason = "";
 
     if (targetStatus === "REJECTED") {
@@ -79,8 +134,7 @@ export default function LiveOrderMonitor() {
             ? {
                 ...order,
                 status: targetStatus,
-                rejectReason:
-                  updatedOrderFromBackend?.rejectReason || rejectReason,
+                rejectReason: updatedOrderFromBackend?.rejectReason || rejectReason,
               }
             : order,
         ),
@@ -88,7 +142,10 @@ export default function LiveOrderMonitor() {
     } catch (err) {
       console.error("Error transitioning state context pipeline:", err);
     }
-  };
+  }, [queryClient]);
+
+  const handleView = useCallback((order) => setSelectedOrder(order), []);
+  const handleCloseModal = useCallback(() => setSelectedOrder(null), []);
 
   if (isLoading) {
     return (
@@ -109,13 +166,10 @@ export default function LiveOrderMonitor() {
 
       {orders.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-10 text-center">
-          <p className="text-sm font-semibold text-slate-400">
-            No live orders right now.
-          </p>
+          <p className="text-sm font-semibold text-slate-400">No live orders right now.</p>
         </div>
       ) : (
-        <div className=" rounded-2xl border-slate-200 shadow-sm overflow-hidden">
-          {/* Scroll hint for mobile */}
+        <div className="rounded-2xl border-slate-200 shadow-sm overflow-hidden">
           <p className="sm:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider px-4 pt-3">
             ← Swipe to see more →
           </p>
@@ -128,74 +182,18 @@ export default function LiveOrderMonitor() {
                   <th className="p-3 sm:p-4 whitespace-nowrap">Table</th>
                   <th className="p-3 sm:p-4 whitespace-nowrap">Customer</th>
                   <th className="p-3 sm:p-4 whitespace-nowrap">Items</th>
-                  <th className="p-3 sm:p-4 text-right whitespace-nowrap">
-                    Total
-                  </th>
-                  <th className="p-3 sm:p-4 text-center whitespace-nowrap">
-                    Actions
-                  </th>
+                  <th className="p-3 sm:p-4 text-right whitespace-nowrap">Total</th>
+                  <th className="p-3 sm:p-4 text-center whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {currentOrders.map((order) => (
-                  <tr
+                  <OrderRow
                     key={order._id}
-                    className="hover:bg-slate-50 transition-colors"
-                  >
-                    <td className="p-3 sm:p-4 font-mono font-bold text-rose-600 text-xs sm:text-sm whitespace-nowrap">
-                      {order.orderId}
-                    </td>
-                    <td className="p-3 sm:p-4 font-bold text-slate-700 text-xs sm:text-sm whitespace-nowrap">
-                      {order.tableNumber}
-                    </td>
-                    <td className="p-3 sm:p-4 text-xs sm:text-sm font-semibold whitespace-nowrap">
-                      {order.customerName}
-                    </td>
-                    <td className="p-3 sm:p-4 text-xs text-slate-500 max-w-[160px] truncate">
-                      {order.items
-                        .slice(0, 2)
-                        .map((i) => i.name)
-                        .join(", ")}
-                      {order.items.length > 2 && "..."}
-                    </td>
-                    <td className="p-3 sm:p-4 text-right font-black text-xs sm:text-sm whitespace-nowrap">
-                      ₹{order.total}
-                    </td>
-                    <td className="p-3 sm:p-4">
-                      <div className="flex justify-center gap-1.5 sm:gap-2">
-                        {order.status === "PENDING" ? (
-                          <>
-                            <button
-                              onClick={() =>
-                                handleStatusTransition(order._id, "ACCEPTED")
-                              }
-                              className="p-1.5 sm:p-2 bg-emerald-100 text-emerald-600 rounded-lg hover:bg-emerald-200"
-                            >
-                              <Check size={16} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleStatusTransition(order._id, "REJECTED")
-                              }
-                              className="p-1.5 sm:p-2 bg-rose-100 text-rose-600 rounded-lg hover:bg-rose-200"
-                            >
-                              <X size={16} />
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 flex items-center whitespace-nowrap">
-                            {order.status}
-                          </span>
-                        )}
-                        <button
-                          onClick={() => setSelectedOrder(order)}
-                          className="p-1.5 sm:p-2 border border-slate-200 rounded-lg hover:bg-slate-100"
-                        >
-                          <Eye size={16} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                    order={order}
+                    onStatusChange={handleStatusTransition}
+                    onView={handleView}
+                  />
                 ))}
               </tbody>
             </table>
@@ -203,13 +201,11 @@ export default function LiveOrderMonitor() {
         </div>
       )}
 
-      {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-0 justify-between items-center py-4 px-2">
           <p className="text-xs text-slate-500 font-medium text-center sm:text-left">
             Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
-            {Math.min(indexOfLastOrder, orders.length)} of {orders.length}{" "}
-            orders
+            {Math.min(indexOfLastOrder, orders.length)} of {orders.length} orders
           </p>
           <div className="flex gap-2">
             <button
@@ -231,10 +227,7 @@ export default function LiveOrderMonitor() {
       )}
 
       {selectedOrder && (
-        <OrderDetailsModal
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-        />
+        <OrderDetailsModal order={selectedOrder} onClose={handleCloseModal} />
       )}
     </div>
   );
