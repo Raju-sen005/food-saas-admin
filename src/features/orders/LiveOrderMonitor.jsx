@@ -16,7 +16,7 @@ export default function LiveOrderMonitor() {
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ["live-orders"],
     queryFn: async () => {
-      const res = await axios.get("http://localhost:5000/api/v1/orders/live", {
+      const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE}/orders/live`, {
         withCredentials: true,
       });
       return res.data.data || [];
@@ -66,7 +66,7 @@ export default function LiveOrderMonitor() {
 
     try {
       const res = await axios.patch(
-        `http://localhost:5000/api/v1/orders/${orderId}/status`,
+        `${import.meta.env.VITE_APP_API_BASE}/orders/${orderId}/status`,
         { status: targetStatus, rejectReason },
         { withCredentials: true },
       );

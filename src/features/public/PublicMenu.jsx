@@ -53,7 +53,7 @@ export default function PublicMenu() {
     queryKey: ["public-catalog", restaurantId],
     queryFn: async () => {
       const res = await axios.get(
-        `http://localhost:5000/api/v1/menu/public/catalog/${restaurantId}`,
+        `${import.meta.env.VITE_APP_API_BASE}/menu/public/catalog/${restaurantId}`,
       );
       return res.data.data;
     },
@@ -170,7 +170,7 @@ export default function PublicMenu() {
     try {
       setIsSubmitting(true);
       const res = await axios.post(
-        "http://localhost:5000/api/v1/orders/place",
+        `${import.meta.env.VITE_APP_API_BASE}/orders/place`,
         orderPayload,
       );
       if (res.data.success) {

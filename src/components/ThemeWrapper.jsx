@@ -10,9 +10,9 @@ export const CustomerConfigProvider = ({ slug, children }) => {
   useEffect(() => {
     const fetchBrandingData = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/v1/restaurant/public/${slug}`);
+        const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE}/restaurant/public/${slug}`);
         if (res.data.success) setRestaurant(res.data.data);
-      } catch (err) {
+      } catch {
         console.error("Restaurant mapping reference invalid");
       } finally {
         setLoading(false);

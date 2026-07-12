@@ -21,7 +21,7 @@ function Analysis() {
     queryKey: ["analytics"],
     queryFn: async () => {
       const res = await axios.get(
-        `http://localhost:5000/api/v1/analytics/summary?range`,
+        `${import.meta.env.VITE_APP_API_BASE}/analytics/summary?range`,
       );
       return res.data.data;
     },

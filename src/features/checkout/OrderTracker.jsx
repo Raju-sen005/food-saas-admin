@@ -9,7 +9,7 @@ export default function OrderTracker({ order }) {
 
   useEffect(() => {
     // Pipeline client target runtime init
-    const socket = io('http://localhost:5000', { transports: ['websocket'] });
+    const socket = io(`${import.meta.env.VITE_APP_API_BASE}`, { transports: ['websocket'] });
 
     socket.on('connect', () => {
       socket.emit('join_order_tracker', order._id);

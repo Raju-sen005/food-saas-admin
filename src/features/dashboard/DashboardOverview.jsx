@@ -8,7 +8,7 @@ export default function DashboardOverview() {
     queryKey: ['dashboard-metrics'],
     queryFn: async () => {
       // Axios call directly to our today-restricted backend route
-      const res = await axios.get('http://localhost:5000/api/v1/orders/live', { withCredentials: true });
+      const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE}/orders/live`, { withCredentials: true });
       const todayOrders = res.data.data || [];
       
       // Calculate revenue from today's orders (Excluding REJECTED orders for clear accounting)

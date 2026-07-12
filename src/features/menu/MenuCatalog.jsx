@@ -34,21 +34,13 @@ export default function MenuCatalog() {
   // ==========================================
   // 🟢 READ: Fetch Admin Items (Using absolute synchronized endpoint path)
   // ==========================================
-  // const { data: menuItems = [], isLoading } = useQuery({
-  //   queryKey: ["menu-items"],
-  //   queryFn: async () => {
-  //     const res = await axios.get(
-  //       "http://localhost:5000/api/v1/menu/admin/items",
-  //     );
-  //     return res.data.data || [];
-  //   },
-  // });
+  
   const { data: menuItems = { items: [], combos: [] }, isLoading } = useQuery({
     queryKey: ["menu-items"], // Key change kar di
     queryFn: async () => {
       const [itemsRes, combosRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/v1/menu/admin/items"),
-        axios.get("http://localhost:5000/api/v1/menu/admin/combos"), // Naya endpoint
+        axios.get(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/items`),
+        axios.get(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos`), // Naya endpoint
       ]);
       return {
         items: itemsRes.data.data || [],
@@ -98,12 +90,12 @@ const allCatalogItems = [
     mutationFn: async (payload) => {
       if (editingItem) {
         return await axios.patch(
-          `http://localhost:5000/api/v1/menu/admin/items/${editingItem._id}`,
+          `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items/${editingItem._id}`,
           payload,
         );
       }
       return await axios.post(
-        "http://localhost:5000/api/v1/menu/admin/items",
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items`,
         payload,
       );
     },
@@ -125,7 +117,7 @@ const allCatalogItems = [
   const deleteMutation = useMutation({
     mutationFn: async (itemId) => {
       return await axios.delete(
-        `http://localhost:5000/api/v1/menu/admin/items/${itemId}`,
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items/${itemId}`,
       );
     },
     onSuccess: () => {
@@ -136,7 +128,7 @@ const allCatalogItems = [
   const deleteComboMutation = useMutation({
     mutationFn: async (comboId) => {
       return await axios.delete(
-        `http://localhost:5000/api/v1/menu/admin/combos/${comboId}`,
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${comboId}`,
       );
     },
     onSuccess: () => {
@@ -184,7 +176,7 @@ const allCatalogItems = [
 
   const comboMutation = useMutation({
     mutationFn: (data) =>
-      axios.post("http://localhost:5000/api/v1/menu/admin/combos", data),
+      axios.post(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos`, data),
     onSuccess: () => {
       queryClient.invalidateQueries(["menu-items"]);
       closeAndResetModal();
@@ -194,7 +186,7 @@ const allCatalogItems = [
   const updateComboMutation = useMutation({
     mutationFn: async ({ id, data }) => {
       return await axios.patch(
-        `http://localhost:5000/api/v1/menu/admin/combos/${id}`,
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${id}`,
         data,
       );
     },

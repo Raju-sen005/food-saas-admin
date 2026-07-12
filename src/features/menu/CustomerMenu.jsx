@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useCustomerConfig } from '../../components/ThemeWrapper';
-import { ShoppingBag, Plus, Minus } from 'lucide-react';
+import {  Plus, Minus } from 'lucide-react';
 
 export default function CustomerMenu({ onUpdateCart, cart }) {
   const restaurant = useCustomerConfig();
@@ -11,13 +11,13 @@ export default function CustomerMenu({ onUpdateCart, cart }) {
   useEffect(() => {
     const loadMenu = async () => {
       try {
-        const res = await axios.get(`http://localhost:5000/api/v1/menu/public/catalog/${restaurant._id}`);
+        const res = await axios.get(`${import.meta.env.VITE_APP_API_BASE}/menu/public/catalog/${restaurant._id}`);
         if (res.data.success) {
           setCatalog(res.data.data);
           const firstCat = Object.keys(res.data.data.categories)[0];
           if (firstCat) setActiveCategory(firstCat);
         }
-      } catch (err) {
+      } catch  {
         console.error("Error compilation mapping details.");
       }
     };

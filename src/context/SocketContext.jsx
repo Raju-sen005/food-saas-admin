@@ -11,7 +11,7 @@ export const SocketProvider = ({ children }) => {
   useEffect(() => {
     if (!user || !user.restaurantId) return;
 
-    const socketInstance = io('http://localhost:5000', {
+    const socketInstance = io(`${import.meta.env.VITE_APP_API_BASE}`, {
       withCredentials: true,
       transports: ['websocket']
     });

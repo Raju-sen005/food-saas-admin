@@ -29,7 +29,7 @@ export default function RegisterTenant({ onSwitchToLogin }) {
       if (response.success) {
         // Step 2 and 5 integration verification target URL config
         // Custom link for customer app hit resolution:
-        const liveMenuUrl = `http://localhost:5174/?store=${generatedSlug}`;
+        const liveMenuUrl = `${import.meta.env.VITE_APP_API_BASE}/?store=${generatedSlug}`;
         // Utilizing global openqr chart generator api mesh network
         const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(liveMenuUrl)}`;
         
