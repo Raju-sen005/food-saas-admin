@@ -73,7 +73,7 @@ function Analysis() {
     );
   }, [stats]);
 
-  if (isLoading) return <div>Loading Analytics...</div>;
+
 
   if (error || !stats) {
     return (
