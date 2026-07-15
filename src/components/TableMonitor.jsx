@@ -33,31 +33,26 @@ export default function TableMonitor() {
   const invoiceLink = `${window.location.origin}/invoice/${order._id}`;
 
   // WhatsApp Message
-  const message = `🧾 *PAYMENT RECEIPT*
+  const message = ` *PAYMENT RECEIPT*
 
-// ━━━━━━━━━━━━━━━━━━
-// 🧾 *PAYMENT RECEIPT*
-// ━━━━━━━━━━━━━━━━━━
 
-👋 Hello *${order.customerName}*,
+ Hello *${order.customerName}*,
 
 Thank you for dining with us.
 Your payment has been successfully received.
 
-📍 *Table No:* ${order.tableNumber}
-💰 *Total Paid:* ₹${Number(order.total).toFixed(2)}
+ *Table No:* ${order.tableNumber}
+ *Total Paid:* ₹${Number(order.total).toFixed(2)}
 
 ━━━━━━━━━━━━━━━━━━
 
-// 📄 *Digital Invoice*
-// ${invoiceLink}
 
-⭐ We hope you enjoyed your experience.
+ We hope you enjoyed your experience.
 
 Thank you for choosing us.
 We look forward to serving you again!
 
-🙏 Have a wonderful day.`;
+ Have a wonderful day.`;
 
   // Open WhatsApp
   window.open(
