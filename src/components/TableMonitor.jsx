@@ -26,45 +26,65 @@ export default function TableMonitor() {
   }, []);
 
   const handleBillAndWhatsApp = async (order) => {
-    // 1. WhatsApp Message Trigger
-    const invoiceLink = `${window.location.origin}/invoice/${order._id}`;
-    const message = `*🧾 BILL: ${user?.restaurantName}*
+  // Restaurant Name
+  // const restaurantName = user?.restaurantName || "Our Restaurant";
 
-Hello *${order.customerName}*, 
-Thank you for dining with us!
+  // Invoice Link
+  const invoiceLink = `${window.location.origin}/invoice/${order._id}`;
 
-*Table Number:* #${order.tableNumber}
-*Total Amount:* ₹${order.total}
+  // WhatsApp Message
+  const message = `🧾 *PAYMENT RECEIPT*
 
----
-*View your detailed invoice here:*
-${invoiceLink}
+// ━━━━━━━━━━━━━━━━━━
+// 🧾 *PAYMENT RECEIPT*
+// ━━━━━━━━━━━━━━━━━━
 
-*Have a great day!* 👋`;
-    window.open(
-      `https://wa.me/${order.customerPhone}?text=${encodeURIComponent(message)}`,
-      "_blank",
+👋 Hello *${order.customerName}*,
+
+Thank you for dining with us.
+Your payment has been successfully received.
+
+📍 *Table No:* ${order.tableNumber}
+💰 *Total Paid:* ₹${Number(order.total).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━
+
+// 📄 *Digital Invoice*
+// ${invoiceLink}
+
+⭐ We hope you enjoyed your experience.
+
+Thank you for choosing us.
+We look forward to serving you again!
+
+🙏 Have a wonderful day.`;
+
+  // Open WhatsApp
+  window.open(
+    `https://wa.me/${order.customerPhone}?text=${encodeURIComponent(message)}`,
+    "_blank"
+  );
+
+  // Mark order completed
+  try {
+    await axios.patch(
+      `/orders/${order._id}/complete`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      }
     );
 
-    // 2. Mark as COMPLETED in Database
-    try {
-      await axios.patch(
-        `/orders/${order._id}/complete`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        },
-      );
-
-      // 3. FORCE UPDATE UI: State se us order ko manually filter out karein
-      // Isse API response ka wait nahi karna padega, UI instant update hoga
-      setActiveOrders((prev) => prev.filter((o) => o._id !== order._id));
-    } catch (err) {
-      console.error("Failed to complete order", err);
-      // Agar error aaye toh wapas list fetch kar lein
-      fetchActiveOrders();
-    }
-  };
+    setActiveOrders((prev) =>
+      prev.filter((o) => o._id !== order._id)
+    );
+  } catch (err) {
+    console.error("Failed to complete order", err);
+    fetchActiveOrders();
+  }
+};
 
   return (
     <div className="p-6 space-y-6">
