@@ -1,7 +1,14 @@
 import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { Plus, UtensilsCrossed, Edit2, Trash2, IndianRupee, Image } from "lucide-react";
+import {
+  Plus,
+  UtensilsCrossed,
+  Edit2,
+  Trash2,
+  IndianRupee,
+  Image,
+} from "lucide-react";
 import Input from "../../components/ui/Input";
 import Modal from "../../components/ui/Modal";
 
@@ -36,22 +43,37 @@ export default function MenuCatalog() {
 
   // 🔑 useMemo — sirf tab recompute hoga jab menuItems.items actually change ho,
   // form typing ki wajah se re-render hone pe NAHI
-  const categoriesList = useMemo(() => [
-    "ALL",
-    ...new Set((menuItems.items || []).map((item) => item.category?.toUpperCase()).filter(Boolean)),
-  ], [menuItems.items]);
+  const categoriesList = useMemo(
+    () => [
+      "ALL",
+      "COMBO",
+      ...new Set(
+        (menuItems.items || [])
+          .map((item) => item.category?.toUpperCase())
+          .filter(Boolean),
+      ),
+    ],
+    [menuItems.items],
+  );
 
-  const allCatalogItems = useMemo(() => [
-    ...(menuItems.items || []),
-    ...(menuItems.combos || []).map((c) => ({ ...c, isCombo: true })),
-  ], [menuItems.items, menuItems.combos]);
+  const allCatalogItems = useMemo(
+    () => [
+      ...(menuItems.items || []),
+      ...(menuItems.combos || []).map((c) => ({
+        ...c,
+        isCombo: true,
+        category: "COMBO",
+      })),
+    ],
+    [menuItems.items, menuItems.combos],
+  );
 
   const filteredMenuItems = useMemo(() => {
     if (activeCategoryFilter === "ALL") return allCatalogItems;
     return allCatalogItems.filter(
       (item) =>
         item.category?.toUpperCase() === activeCategoryFilter ||
-        (!item.category && activeCategoryFilter === "COMBO")
+        (!item.category && activeCategoryFilter === "COMBO"),
     );
   }, [allCatalogItems, activeCategoryFilter]);
 
@@ -67,34 +89,48 @@ export default function MenuCatalog() {
       if (editingItem) {
         return await axios.patch(
           `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items/${editingItem._id}`,
-          payload
+          payload,
         );
       }
-      return await axios.post(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/items`, payload);
+      return await axios.post(
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items`,
+        payload,
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries(["menu-items"]);
       closeAndResetModal();
     },
     onError: (err) => {
-      alert(err.response?.data?.message || "Error processing cloud catalog asset pipeline loop.");
+      alert(
+        err.response?.data?.message ||
+          "Error processing cloud catalog asset pipeline loop.",
+      );
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (itemId) =>
-      await axios.delete(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/items/${itemId}`),
+      await axios.delete(
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/items/${itemId}`,
+      ),
     onSuccess: () => queryClient.invalidateQueries(["menu-items"]),
   });
 
   const deleteComboMutation = useMutation({
     mutationFn: async (comboId) =>
-      await axios.delete(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${comboId}`),
+      await axios.delete(
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${comboId}`,
+      ),
     onSuccess: () => queryClient.invalidateQueries(["menu-items"]),
   });
 
   const comboMutation = useMutation({
-    mutationFn: (data) => axios.post(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos`, data),
+    mutationFn: (data) =>
+      axios.post(
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos`,
+        data,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries(["menu-items"]);
       closeAndResetModal();
@@ -103,7 +139,10 @@ export default function MenuCatalog() {
 
   const updateComboMutation = useMutation({
     mutationFn: async ({ id, data }) =>
-      await axios.patch(`${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${id}`, data),
+      await axios.patch(
+        `${import.meta.env.VITE_APP_API_BASE}/menu/admin/combos/${id}`,
+        data,
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries(["menu-items"]);
       closeAndResetModal();
@@ -145,52 +184,75 @@ export default function MenuCatalog() {
     setFormMode("DISH");
   }, []);
 
-  const handleSubmit = useCallback((e) => {
-    e.preventDefault();
+  const handleSubmit = useCallback(
+    (e) => {
+      e.preventDefault();
 
-    const payload = {
+      const payload = {
+        name,
+        description,
+        price: formMode === "COMBO" ? comboCalculatedPrice : price,
+        image,
+        ...(formMode === "DISH" && { category }),
+        ...(formMode === "COMBO" && { items: selectedItems }),
+      };
+
+      if (editingItem) {
+        if (formMode === "COMBO") {
+          updateComboMutation.mutate({ id: editingItem._id, data: payload });
+        } else {
+          upsertMutation.mutate(payload);
+        }
+      } else {
+        if (formMode === "DISH") {
+          upsertMutation.mutate(payload);
+        } else {
+          comboMutation.mutate(payload);
+        }
+      }
+    },
+    [
       name,
       description,
-      price: formMode === "COMBO" ? comboCalculatedPrice : price,
+      price,
       image,
-      ...(formMode === "DISH" && { category }),
-      ...(formMode === "COMBO" && { items: selectedItems }),
-    };
+      category,
+      formMode,
+      selectedItems,
+      editingItem,
+      comboCalculatedPrice,
+      updateComboMutation,
+      upsertMutation,
+      comboMutation,
+    ],
+  );
 
-    if (editingItem) {
-      if (formMode === "COMBO") {
-        updateComboMutation.mutate({ id: editingItem._id, data: payload });
-      } else {
-        upsertMutation.mutate(payload);
+  const handleDeleteClick = useCallback(
+    (item) => {
+      if (window.confirm("Are you sure you want to discard this item?")) {
+        if (item.isCombo) {
+          deleteComboMutation.mutate(item._id);
+        } else {
+          deleteMutation.mutate(item._id);
+        }
       }
-    } else {
-      if (formMode === "DISH") {
-        upsertMutation.mutate(payload);
-      } else {
-        comboMutation.mutate(payload);
-      }
-    }
-  }, [name, description, price, image, category, formMode, selectedItems, editingItem, comboCalculatedPrice, updateComboMutation, upsertMutation, comboMutation]);
-
-  const handleDeleteClick = useCallback((item) => {
-    if (window.confirm("Are you sure you want to discard this item?")) {
-      if (item.isCombo) {
-        deleteComboMutation.mutate(item._id);
-      } else {
-        deleteMutation.mutate(item._id);
-      }
-    }
-  }, [deleteComboMutation, deleteMutation]);
+    },
+    [deleteComboMutation, deleteMutation],
+  );
 
   const toggleSelectedItem = useCallback((itemId, checked) => {
-    setSelectedItems((prev) => (checked ? [...prev, itemId] : prev.filter((id) => id !== itemId)));
+    setSelectedItems((prev) =>
+      checked ? [...prev, itemId] : prev.filter((id) => id !== itemId),
+    );
   }, []);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-20 space-y-4">
         <div className="w-9 h-9 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-sm font-bold text-slate-500 tracking-tight">Syncing Digital Menu Matrix...</p>
+        <p className="text-sm font-bold text-slate-500 tracking-tight">
+          Syncing Digital Menu Matrix...
+        </p>
       </div>
     );
   }
@@ -199,9 +261,12 @@ export default function MenuCatalog() {
     <div className="space-y-6 font-sans">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/60 shadow-xs">
         <div>
-          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Digital Menu Catalog</h1>
+          <h1 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
+            Digital Menu Catalog
+          </h1>
           <p className="text-xs md:text-sm text-slate-500 font-medium mt-0.5">
-            Configure categories, single dishes, and active operational items pricing
+            Configure categories, single dishes, and active operational items
+            pricing
           </p>
         </div>
         <button
@@ -236,7 +301,9 @@ export default function MenuCatalog() {
             <UtensilsCrossed size={28} />
           </div>
           <div>
-            <h3 className="font-bold text-slate-800 text-base">No Menu Items Listed</h3>
+            <h3 className="font-bold text-slate-800 text-base">
+              No Menu Items Listed
+            </h3>
             <p className="text-xs text-slate-400 font-medium mt-1">
               {activeCategoryFilter !== "ALL"
                 ? `No dishes found matching target selection criteria "${activeCategoryFilter}" filter context.`
@@ -259,7 +326,11 @@ export default function MenuCatalog() {
               <div className="p-5 flex gap-4 items-start">
                 <div className="w-20 h-20 rounded-xl bg-slate-50 border border-slate-100 shrink-0 overflow-hidden relative flex items-center justify-center text-slate-300">
                   {item.image ? (
-                    <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover"
+                    />
                   ) : (
                     <Image size={24} />
                   )}
@@ -273,14 +344,19 @@ export default function MenuCatalog() {
                     {item.name}
                   </h3>
                   <p className="text-xs text-slate-400 font-medium line-clamp-2 leading-relaxed">
-                    {item.description || "No direct kitchen culinary preparations logs specified."}
+                    {item.description ||
+                      "No direct kitchen culinary preparations logs specified."}
                   </p>
                 </div>
               </div>
 
               <div className="px-5 py-3.5 bg-slate-50/50 border-t border-slate-100 flex justify-between items-center">
                 <span className="text-base font-black text-slate-900 flex items-center tracking-tight">
-                  <IndianRupee size={15} strokeWidth={2.5} className="mt-0.5 text-slate-800" />
+                  <IndianRupee
+                    size={15}
+                    strokeWidth={2.5}
+                    className="mt-0.5 text-slate-800"
+                  />
                   {item.price?.toLocaleString("en-IN")}
                 </span>
 
@@ -335,21 +411,32 @@ export default function MenuCatalog() {
             </label>
             <div className="max-h-40 overflow-y-auto border border-slate-200 rounded-xl p-2 bg-slate-50">
               {menuItems.items.map((item) => (
-                <label key={item._id} className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer text-sm">
+                <label
+                  key={item._id}
+                  className="flex items-center gap-3 p-2 hover:bg-white rounded-lg cursor-pointer text-sm"
+                >
                   <input
                     type="checkbox"
                     checked={selectedItems.includes(item._id)}
-                    onChange={(e) => toggleSelectedItem(item._id, e.target.checked)}
+                    onChange={(e) =>
+                      toggleSelectedItem(item._id, e.target.checked)
+                    }
                   />
                   <span className="flex-1">{item.name}</span>
-                  <span className="text-xs font-bold text-slate-400">₹{item.price}</span>
+                  <span className="text-xs font-bold text-slate-400">
+                    ₹{item.price}
+                  </span>
                 </label>
               ))}
             </div>
 
             <div className="flex justify-between items-center px-4 py-3 bg-rose-50 rounded-xl border border-rose-100">
-              <span className="text-[11px] font-black uppercase text-rose-600">Combo Total Price</span>
-              <span className="text-sm font-black text-rose-700">₹{comboCalculatedPrice}</span>
+              <span className="text-[11px] font-black uppercase text-rose-600">
+                Combo Total Price
+              </span>
+              <span className="text-sm font-black text-rose-700">
+                ₹{comboCalculatedPrice}
+              </span>
             </div>
           </div>
         )}
@@ -358,7 +445,11 @@ export default function MenuCatalog() {
           <Input
             label="Title"
             required
-            placeholder={formMode === "DISH" ? "e.g., Spicy Paneer Tikka" : "e.g., Weekend Special Combo"}
+            placeholder={
+              formMode === "DISH"
+                ? "e.g., Spicy Paneer Tikka"
+                : "e.g., Weekend Special Combo"
+            }
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -375,7 +466,11 @@ export default function MenuCatalog() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input
-              label={formMode === "COMBO" ? "Calculated Price (INR)" : "Selling Price (INR)"}
+              label={
+                formMode === "COMBO"
+                  ? "Calculated Price (INR)"
+                  : "Selling Price (INR)"
+              }
               type="number"
               required
               readOnly={formMode === "COMBO"}

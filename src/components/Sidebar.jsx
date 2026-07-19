@@ -8,6 +8,7 @@ import {
   BarChart3,
   Tag,
   QrCode,
+  DollarSign,
 } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -16,6 +17,7 @@ const NAV_ITEMS = [
   { to: "/menu", icon: Utensils, label: "Menu Catalog" },
   { to: "/table-monitor", icon: QrCode, label: "Table Monitor" },
   { to: "/analysis", icon: BarChart3, label: "Analysis" },
+  { to: "/payment", icon: DollarSign, label: "Payment"},
   { to: "/offer", icon: Tag, label: "Offers" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];

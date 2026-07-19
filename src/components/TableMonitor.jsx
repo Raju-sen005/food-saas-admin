@@ -85,38 +85,56 @@ We look forward to serving you again!
     <div className="p-6 space-y-6">
       <h1 className="text-2xl font-black">Live Table Monitor</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {activeOrders.map((order) => (
-          <div
-            key={order._id}
-            className="bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-lg"
-          >
-            <div className="flex justify-between items-center mb-4">
-              <span className="font-black text-emerald-600 text-lg">
-                Table {order.tableNumber}
-              </span>
-              <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase">
-                Occupied
-              </span>
-            </div>
-            <div className="space-y-1 mb-4">
-              <p className="font-bold text-slate-800">{order.customerName}</p>
-              <p className="text-xs text-slate-400 font-medium">
-                {order.customerPhone}
-              </p>
-            </div>
-            <div className="text-2xl font-black text-slate-900 mb-6">
-              ₹{order.total}
-            </div>
+  {activeOrders.length === 0 ? (
+    <div className="col-span-full flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+      {/* <div className="text-6xl mb-4">🪑</div> */}
 
-            <button
-              onClick={() => handleBillAndWhatsApp(order)}
-              className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-[0.98]"
-            >
-              Generate Bill & Clear Table
-            </button>
-          </div>
-        ))}
+      <h2 className="text-2xl font-bold text-slate-800">
+        All Tables Are Free
+      </h2>
+
+      <p className="text-slate-500 mt-2 text-center max-w-md">
+        There are no active dine-in orders at the moment.
+        All tables are available for new customers.
+      </p>
+    </div>
+  ) : (
+    activeOrders.map((order) => (
+      <div
+        key={order._id}
+        className="bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-lg"
+      >
+        <div className="flex justify-between items-center mb-4">
+          <span className="font-black text-emerald-600 text-lg">
+            Table {order.tableNumber}
+          </span>
+
+          <span className="text-[10px] font-black bg-emerald-100 text-emerald-700 px-3 py-1 rounded-full uppercase">
+            Occupied
+          </span>
+        </div>
+
+        <div className="space-y-1 mb-4">
+          <p className="font-bold text-slate-800">{order.customerName}</p>
+          <p className="text-xs text-slate-400 font-medium">
+            {order.customerPhone}
+          </p>
+        </div>
+
+        <div className="text-2xl font-black text-slate-900 mb-6">
+          ₹{order.total}
+        </div>
+
+        <button
+          onClick={() => handleBillAndWhatsApp(order)}
+          className="w-full bg-slate-900 text-white py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-all active:scale-[0.98]"
+        >
+          Generate Bill & Clear Table
+        </button>
       </div>
+    ))
+  )}
+</div>
     </div>
   );
 }

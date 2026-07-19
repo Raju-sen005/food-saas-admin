@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { LogOut, Building } from "lucide-react";
+import { LogOut } from "lucide-react";
 import axios from "axios";
 
 export default function Navbar() {
@@ -18,13 +18,13 @@ export default function Navbar() {
   return (
     <div className="flex-1 flex items-center justify-between gap-2 min-w-0">
       <div className="flex items-center gap-1.5 sm:gap-2 text-sm font-medium text-slate-600 min-w-0">
-        <Building size={16} className="text-slate-400 shrink-0" />
+        {/* <Building size={16} className="text-slate-400 shrink-0" />
         <span className="hidden sm:inline font-semibold text-slate-800 whitespace-nowrap">
           Tenant Context:
         </span>
         <span className="bg-slate-100 px-2 py-0.5 rounded text-[10px] sm:text-xs font-mono truncate max-w-[90px] sm:max-w-none">
           {user?.restaurantId}
-        </span>
+        </span> */}
       </div>
 
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
