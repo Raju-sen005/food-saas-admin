@@ -10,14 +10,14 @@ import {
   QrCode,
   DollarSign,
 } from "lucide-react";
-
+import logo from "../assets/cho.png";
 const NAV_ITEMS = [
   { to: "/", icon: LayoutDashboard, label: "Overview" },
   { to: "/orders", icon: ShoppingBag, label: "Live Orders" },
   { to: "/menu", icon: Utensils, label: "Menu Catalog" },
   { to: "/table-monitor", icon: QrCode, label: "Table Monitor" },
   { to: "/analysis", icon: BarChart3, label: "Analysis" },
-  { to: "/payment", icon: DollarSign, label: "Payment"},
+  { to: "/payment", icon: DollarSign, label: "Payment" },
   { to: "/offer", icon: Tag, label: "Offers" },
   { to: "/settings", icon: Settings, label: "Settings" },
 ];
@@ -25,13 +25,17 @@ const NAV_ITEMS = [
 export default function Sidebar({ closeMobileSidebar }) {
   const handleNavClick = useMemo(
     () => (closeMobileSidebar ? closeMobileSidebar : () => {}),
-    [closeMobileSidebar]
+    [closeMobileSidebar],
   );
 
   return (
     <aside className="w-64 bg-slate-900 text-white h-full min-h-screen flex flex-col">
-      <div className="p-6 text-xl font-bold border-b border-slate-800 tracking-wide text-red-500">
-        Chotu AI+ Admin
+      <div className="p-6 border-b border-slate-800 h-30">
+        <img
+          src={logo}
+          alt="Chotu"
+          style={{ position: "relative", top: "-67px" }}
+        />
       </div>
       <nav className="flex-1 p-4 space-y-2">
         {NAV_ITEMS.map(({ to, icon: Icon, label }) => (

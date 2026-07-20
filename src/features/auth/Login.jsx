@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-
+import logo from "../../assets/cho.png";
 export default function Login({ onSwitchToSignup }) {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
@@ -22,7 +22,10 @@ export default function Login({ onSwitchToSignup }) {
       <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-rose-500 via-red-500 to-amber-500 p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
         <div className="relative z-10">
-          <h1 className="text-3xl font-black text-white tracking-tight">Chotu AI+</h1>
+          {/* <h1 className="text-3xl font-black text-white tracking-tight">Chotu AI+</h1> */}
+          <img src={logo} alt="Chotu" 
+          className="h-80 m-auto object-contain brightness-0 invert"
+           />
           <p className="text-white/80 font-medium text-sm mt-1">Partner Network Management</p>
         </div>
         <div className="relative z-10 text-white space-y-3">
