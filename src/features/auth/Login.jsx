@@ -109,7 +109,7 @@ export default function Login({ onSwitchToSignup }) {
 
           <div className="text-center pt-2">
             <p className="text-xs text-slate-500">
-              New to Chotu AI+?{' '}
+              New to Chotu?{' '}
               <button
                 onClick={onSwitchToSignup}
                 className="text-red-500 font-extrabold hover:underline cursor-pointer"
