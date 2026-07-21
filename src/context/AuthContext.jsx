@@ -25,9 +25,14 @@ export const AuthProvider = ({ children }) => {
     verifySession();
   }, []);
 
-  // useCallback: function reference stable rehti h, consumers unnecessarily re-render nahi hote
   const login = useCallback(async (email, password) => {
     const res = await axios.post("/auth/login", { email, password });
+    
+    // Agar subscription expire ya past due hai
+    if (res.data.requiresSubscription) {
+      return res.data; // Yeh login component mein catch hoga
+    }
+
     if (res.data.success) setUser(res.data.data);
     return res.data;
   }, []);
@@ -46,7 +51,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // useMemo: value object sirf tab naya banega jab user/loading actually change ho
   const value = useMemo(
     () => ({ user, login, registerTenant, logout, loading }),
     [user, loading, login, registerTenant, logout]

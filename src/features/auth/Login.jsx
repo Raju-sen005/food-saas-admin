@@ -1,35 +1,53 @@
-import { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
-import logo from "../../assets/cho.png";
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import logo from '../../assets/cho.png';
+
 export default function Login({ onSwitchToSignup }) {
   const { login } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [authError, setAuthError] = useState('');
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     try {
-      setAuthError("");
-      await login(email, password);
+      setAuthError('');
+      const response = await login(email, password);
+
+      if (response && response.requiresSubscription) {
+        navigate('/subscription-checkout', {
+          state: { restaurantId: response.restaurantId || response.tenantId },
+        });
+        return;
+      }
+
+      navigate('/dashboard');
     } catch (err) {
-      setAuthError(err.response?.data?.message || "Invalid Email or Password");
+      const responseData = err.response?.data;
+      if (responseData && responseData.requiresSubscription) {
+        navigate('/subscription-checkout', {
+          state: { restaurantId: responseData.restaurantId || responseData.tenantId },
+        });
+        return;
+      }
+
+      setAuthError(responseData?.message || 'Invalid Email or Password');
     }
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-12 bg-[#F8F9FA] font-sans">
-      <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-rose-500 via-red-500 to-amber-500 p-12 flex-col justify-between relative overflow-hidden">
+    <div className="h-screen w-screen grid lg:grid-cols-12 bg-[#F8F9FA] font-sans overflow-hidden">
+      {/* Left Banner Column - Unified UI Matching Registration */}
+      <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-rose-500 via-red-500 to-amber-500 p-8 xl:p-12 flex-col justify-between relative overflow-hidden h-full">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
-        <div className="relative z-10">
-          {/* <h1 className="text-3xl font-black text-white tracking-tight">Chotu AI+</h1> */}
-          <img src={logo} alt="Chotu" 
-          className="h-80 m-auto object-contain brightness-0 invert"
-           />
+        <div className="relative z-10 text-center">
+          <img src={logo} alt="Chotu" className="h-44 xl:h-52 m-auto object-contain brightness-0 invert" />
           <p className="text-white/80 font-medium text-sm mt-1">Partner Network Management</p>
         </div>
-        <div className="relative z-10 text-white space-y-3">
-          <h2 className="text-2xl font-bold leading-tight">
+        <div className="relative z-10 text-white space-y-2">
+          <h2 className="text-xl xl:text-2xl font-bold leading-tight">
             Manage orders, update menus, and analyze growth instantly.
           </h2>
           <p className="text-white/70 text-xs">
@@ -38,24 +56,25 @@ export default function Login({ onSwitchToSignup }) {
         </div>
       </div>
 
-      <div className="col-span-12 lg:col-span-7 flex items-center justify-center p-6 md:p-12">
-        <div className="max-w-md w-full space-y-6">
-          <div className="space-y-2">
+      {/* Right Form Column */}
+      <div className="col-span-12 lg:col-span-7 flex items-center justify-center p-6 lg:p-8 h-full overflow-y-auto">
+        <div className="max-w-md w-full space-y-5 my-auto">
+          <div className="space-y-1">
             <h2 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Sign In</h2>
-            <p className="text-slate-500 text-sm">
+            <p className="text-slate-500 text-xs md:text-sm">
               Welcome back! Please enter your merchant account operational credentials.
             </p>
           </div>
 
           {authError && (
-            <div className="bg-rose-50/80 backdrop-blur-xs text-rose-600 p-4 rounded-xl text-xs font-semibold border border-rose-100 flex items-center gap-2 animate-shake">
+            <div className="bg-rose-50/80 backdrop-blur-xs text-rose-600 p-3.5 rounded-xl text-xs font-semibold border border-rose-100 flex items-center gap-2 animate-shake">
               ⚠️ {authError}
             </div>
           )}
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Registered Email
               </label>
               <input
@@ -68,7 +87,7 @@ export default function Login({ onSwitchToSignup }) {
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">
                 Secure Password
               </label>
               <input
@@ -82,7 +101,7 @@ export default function Login({ onSwitchToSignup }) {
             </div>
             <button
               type="submit"
-              className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3.5 rounded-xl font-bold hover:opacity-95 active:scale-[0.99] transition-all shadow-md shadow-red-500/20 text-sm mt-3 cursor-pointer"
+              className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3.5 rounded-xl font-bold hover:opacity-95 active:scale-[0.99] transition-all shadow-md shadow-red-500/20 text-sm mt-2 cursor-pointer"
             >
               Enter Dashboard Control
             </button>
@@ -90,7 +109,7 @@ export default function Login({ onSwitchToSignup }) {
 
           <div className="text-center pt-2">
             <p className="text-xs text-slate-500">
-              New to Chotu AI+?{" "}
+              New to Chotu AI+?{' '}
               <button
                 onClick={onSwitchToSignup}
                 className="text-red-500 font-extrabold hover:underline cursor-pointer"

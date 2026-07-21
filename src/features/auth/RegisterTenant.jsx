@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import Button from '../../components/ui/Button';
-import Input from '../../components/ui/Input';
+import logo from '../../assets/cho.png';
 
 export default function RegisterTenant({ onSwitchToLogin }) {
   const { registerTenant } = useAuth();
@@ -14,7 +13,7 @@ export default function RegisterTenant({ onSwitchToLogin }) {
   const [phone, setPhone] = useState('');
   
   const [error, setError] = useState('');
-  const [successData, setSuccessData] = useState(null); // Registration metadata cache storage
+  const [successData, setSuccessData] = useState(null);
 
   // Automatic unique URL generator logic
   const generatedSlug = restaurantName.trim().toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
@@ -26,11 +25,8 @@ export default function RegisterTenant({ onSwitchToLogin }) {
       const payload = { restaurantName, slug: generatedSlug, name, email, password, phone };
       const response = await registerTenant(payload);
       
-      if (response.success) {
-        // Step 2 and 5 integration verification target URL config
-        // Custom link for customer app hit resolution:
-        const liveMenuUrl = `${import.meta.env.VITE_APP_API_BASE}/?store=${generatedSlug}`;
-        // Utilizing global openqr chart generator api mesh network
+      if (response && response.success) {
+        const liveMenuUrl = `${import.meta.env.VITE_APP_API_BASE || window.location.origin}/?store=${generatedSlug}`;
         const qrCodeApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(liveMenuUrl)}`;
         
         setSuccessData({
@@ -38,6 +34,8 @@ export default function RegisterTenant({ onSwitchToLogin }) {
           qr: qrCodeApiUrl,
           slug: generatedSlug
         });
+
+        
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed. Try again.');
@@ -46,17 +44,16 @@ export default function RegisterTenant({ onSwitchToLogin }) {
 
   if (successData) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-        <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center space-y-6 animate-fade-in">
+      <div className="h-screen bg-[#F8F9FA] flex items-center justify-center p-6 font-sans overflow-hidden">
+        <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl max-w-md w-full text-center space-y-6 border border-slate-100 animate-fade-in">
           <div>
             <span className="text-4xl">🎉</span>
             <h2 className="text-2xl font-black text-slate-900 mt-2">Registration Live!</h2>
-            <p className="text-xs text-slate-400 mt-1">Aapka multi-tenant storefront setup allocate ho gaya hai.</p>
+            <p className="text-xs text-slate-500 mt-1">Aapka multi-tenant storefront setup allocate ho gaya hai.</p>
           </div>
 
-          {/* QR Code Graphic Frame */}
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 inline-block">
-            <img src={successData.qr} alt="Restaurant QR" className="mx-auto rounded-lg shadow-xs" />
+          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 inline-block shadow-inner">
+            <img src={successData.qr} alt="Restaurant QR" className="mx-auto rounded-lg shadow-xs h-36 w-36 object-contain" />
           </div>
 
           <div className="space-y-2 text-left">
@@ -66,57 +63,140 @@ export default function RegisterTenant({ onSwitchToLogin }) {
             </a>
           </div>
 
-          <p className="text-xs text-slate-500 font-medium bg-amber-50 p-3 rounded-lg border border-amber-100">
-            💡 <b>Testing Flow:</b> Is QR code par click karo ya URL ko nayi tab mein open karke items purchase karo. Order seedhe aapke admin live panel par flash hoga!
+          <p className="text-xs text-slate-500 font-medium bg-amber-50 p-3 rounded-xl border border-amber-100 text-left">
+            💡 <b>Next Step:</b> Ab aap sign in karke apna dashboard access kar sakte hain.
           </p>
 
-          <Button onClick={() => window.location.reload()} className="w-full">
-            Open Dashboard Workspace
-          </Button>
+          <button 
+            onClick={onSwitchToLogin} 
+            className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3.5 rounded-xl font-bold hover:opacity-95 active:scale-[0.99] transition-all shadow-md shadow-red-500/20 text-sm cursor-pointer"
+          >
+            Proceed to Sign In
+          </button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-xl max-w-lg w-full border border-slate-100">
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Register Your Restaurant</h2>
-          <p className="text-sm text-slate-400 mt-1">Create your automated digital menu SaaS portal</p>
+    <div className="h-screen w-screen grid lg:grid-cols-12 bg-[#F8F9FA] font-sans overflow-hidden">
+      {/* Left Banner Column - Unified UI */}
+      <div className="hidden lg:flex lg:col-span-5 bg-gradient-to-br from-rose-500 via-red-500 to-amber-500 p-8 xl:p-12 flex-col justify-between relative overflow-hidden h-full">
+        <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
+        <div className="relative z-10 text-center">
+          <img src={logo} alt="Chotu" className="h-44 xl:h-52 m-auto object-contain brightness-0 invert" />
+          <p className="text-white/80 font-medium text-sm mt-1">Partner Network Management</p>
         </div>
+        <div className="relative z-10 text-white space-y-2">
+          <h2 className="text-xl xl:text-2xl font-bold leading-tight">
+            Manage orders, update menus, and analyze growth instantly.
+          </h2>
+          <p className="text-white/70 text-xs">
+            Empowering 10,000+ cloud kitchens and premium outlets across India.
+          </p>
+        </div>
+      </div>
 
-        {error && <div className="bg-rose-50 text-rose-600 p-3 rounded-lg text-sm font-medium mb-4 border border-rose-100">❌ {error}</div>}
+      {/* Right Form Column */}
+      <div className="col-span-12 lg:col-span-7 flex items-center justify-center p-6 lg:p-8 h-full overflow-y-auto">
+        <div className="max-w-xl w-full space-y-4 my-auto">
+          <div className="space-y-0.5">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">Register Your Restaurant</h2>
+            <p className="text-slate-500 text-xs">Create your automated digital menu SaaS portal</p>
+          </div>
 
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Restaurant Name" required placeholder="e.g. Haveli Foods" value={restaurantName} onChange={(e) => setRestaurantName(e.target.value)} />
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Auto Generated Slug/URL</label>
-              <div className="px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs font-mono font-bold truncate mt-1">
-                /{generatedSlug || 'your-url'}
+          {error && (
+            <div className="bg-rose-50/80 backdrop-blur-xs text-rose-600 p-3 rounded-xl text-xs font-semibold border border-rose-100 flex items-center gap-2">
+              ❌ {error}
+            </div>
+          )}
+
+          <form onSubmit={handleRegister} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Restaurant Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Haveli Foods"
+                  value={restaurantName}
+                  onChange={(e) => setRestaurantName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Auto Generated Slug/URL</label>
+                <div className="px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-xs font-mono font-bold truncate">
+                  /{generatedSlug || 'your-url'}
+                </div>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Owner Full Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Raju Sen"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Contact Mobile</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="9876543210"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Business Email Address</label>
+              <input
+                type="email"
+                required
+                placeholder="owner@haveli.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Secure Dashboard Password</label>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 text-xs font-medium placeholder:text-slate-400 focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-500/10 transition-all"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-gradient-to-r from-red-500 to-rose-600 text-white py-3 rounded-xl font-bold hover:opacity-95 active:scale-[0.99] transition-all shadow-md shadow-red-500/20 text-xs mt-1 cursor-pointer"
+            >
+              Register & Generate Live QR Menu
+            </button>
+          </form>
+
+          <div className="text-center pt-1">
+            <p className="text-xs text-slate-500">
+              Already have a store account?{' '}
+              <button onClick={onSwitchToLogin} className="text-red-500 font-extrabold hover:underline cursor-pointer">
+                Sign In
+              </button>
+            </p>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Input label="Owner Full Name" required placeholder="Raju Sen" value={name} onChange={(e) => setName(e.target.value)} />
-            <Input label="Contact Mobile" required placeholder="9876543210" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-
-          <Input label="Business Email Address" type="email" required placeholder="owner@haveli.com" value={email} onChange={(e) => setEmail(e.target.value)} />
-          <Input label="Secure Dashboard Password" type="password" required placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
-
-          <Button type="submit" className="w-full py-3 mt-2">
-            Register & Generate Live QR Menu
-          </Button>
-        </form>
-
-        <div className="text-center mt-4">
-          <p className="text-xs text-slate-500">
-            Already have a store account?{' '}
-            <button onClick={onSwitchToLogin} className="text-red-500 font-bold hover:underline cursor-pointer">Sign In</button>
-          </p>
         </div>
       </div>
     </div>
